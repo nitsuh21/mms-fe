@@ -1,32 +1,30 @@
-import { Metadata } from "next";
-import DashboardStats from "@/components/dashboard/DashboardStats";
-import BusinessOverview from "@/components/dashboard/BusinessOverview";
-import SubscriptionStats from "@/components/dashboard/SubscriptionStats";
-import RecentMembers from "@/components/dashboard/RecentMembers";
+"use client";
 
-export const metadata: Metadata = {
-  title: "MMS Dashboard",
-  description: "Manage your businesses and subscriptions",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/hooks";
 
-export default function Dashboard() {
+export default function MerchantPortalRedirect() {
+  const router = useRouter();
+  // const { user  }  = useAuth();
+
+  // useEffect(() => {
+  //   if (user) {
+  //     // Redirect to the merchant's dashboard
+  //     router.push(`/merchant-portal/${user.id}/dashboard`);
+  //   }
+  // }, [user, router]);
+
   return (
-    <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-        <DashboardStats />
+    <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <h2 className="mb-2 text-2xl font-bold text-black dark:text-white">
+          Redirecting...
+        </h2>
+        <p className="text-body-color dark:text-body-color-dark">
+          Please wait while we redirect you to your dashboard.
+        </p>
       </div>
-
-      <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-        <div className="col-span-12 xl:col-span-8">
-          <BusinessOverview />
-        </div>
-        <div className="col-span-12 xl:col-span-4">
-          <SubscriptionStats />
-        </div>
-        <div className="col-span-12">
-          <RecentMembers />
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
