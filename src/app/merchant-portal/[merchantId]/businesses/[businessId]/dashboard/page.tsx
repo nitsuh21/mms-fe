@@ -71,26 +71,26 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             View your business performance and analytics
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
             <option value="90d">Last 90 days</option>
             <option value="12m">Last 12 months</option>
           </select>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600">
+          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600">
             <FiDownload className="h-4 w-4" />
             Export Report
           </button>
@@ -98,11 +98,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {mockMetrics.map((metric) => (
           <div
             key={metric.label}
-            className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+            className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800"
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.label}</p>
@@ -112,7 +112,7 @@ export default function DashboardPage() {
                 <FiTrendingDown className="h-5 w-5 text-red-500" />
               ) : null}
             </div>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
             <div className="mt-2">
               <span
                 className={`inline-flex items-center text-sm font-medium ${
@@ -132,23 +132,23 @@ export default function DashboardPage() {
 
       {/* Top Performing Plans */}
       <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+        <div className="border-b border-gray-200 px-4 sm:px-6 py-4 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Top Performing Plans
           </h2>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-6">
             {mockTopPlans.map((plan) => (
               <div key={plan.name}>
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">{plan.name}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {plan.subscribers} subscribers
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="font-medium text-gray-900 dark:text-white">
                       ${plan.revenue.toFixed(2)}
                     </p>
@@ -170,9 +170,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Chart */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Revenue Over Time</h2>
-        <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <div className="flex h-48 sm:h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Revenue chart will be implemented here
           </p>
@@ -180,9 +180,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Member Activity Chart */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Member Activity</h2>
-        <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <div className="flex h-48 sm:h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Member activity chart will be implemented here
           </p>

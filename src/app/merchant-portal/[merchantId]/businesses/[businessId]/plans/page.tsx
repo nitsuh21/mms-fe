@@ -76,9 +76,9 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
             Subscription Plans
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
@@ -88,7 +88,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
         <button
           onClick={() => setShowAddPlan(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
         >
           <FiPlus className="h-4 w-4" />
           Add Plan
@@ -97,7 +97,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
       {/* Add Plan Form */}
       {showAddPlan && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             Add New Plan
           </h2>
@@ -153,15 +153,15 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3">
+                <div className="flex flex-col sm:flex-row justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setShowAddPlan(false)}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    className="w-full sm:w-auto rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
-                  <SubmitButton>Add Plan</SubmitButton>
+                  <SubmitButton className="w-full sm:w-auto">Add Plan</SubmitButton>
                 </div>
               </>
             )}
@@ -170,14 +170,14 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       )}
 
       {/* Plans Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {mockPlans.map((plan) => (
           <div
             key={plan.id}
-            className="relative rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+            className="relative rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800"
           >
             {/* Plan Header */}
-            <div className="mb-4 flex items-start justify-between">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h3>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{plan.description}</p>
@@ -204,7 +204,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
             {/* Plan Price */}
             <div className="mb-4">
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                 ${plan.price}
                 <span className="text-base font-normal text-gray-600 dark:text-gray-400">
                   /{plan.billingPeriod.slice(0, 2)}

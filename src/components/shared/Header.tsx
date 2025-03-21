@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BusinessSwitcher } from "@/components/common/BusinessSwitcher";
 import { useTheme } from "@/context/ThemeContext";
-import { FiMoon, FiSun, FiBell, FiUser, FiSettings, FiLogOut } from "react-icons/fi";
+import { FiMoon, FiSun, FiBell, FiUser, FiSettings, FiLogOut, FiMenu } from "react-icons/fi";
 import { useAuth } from "@/lib/auth/rbac";
 import { authService } from "@/services/authService";
 import { useParams } from "next/navigation";
 import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, ROUTES } from "@/config";
+import { useSidebar } from "@/context/SidebarContext";
+import { cn } from "@/lib/utils";
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -19,6 +21,7 @@ const Header = () => {
   const params = useParams();
   const merchantId = params.merchantId as string;
   const { user } = useAuth();
+  const { toggleMobileSidebar, isExpanded } = useSidebar();
 
   // Close the dropdown when clicking outside
   useEffect(() => {
@@ -48,6 +51,15 @@ const Header = () => {
     <header className="sticky top-0 z-999 flex w-full bg-white drop-shadow-1 dark:bg-gray-900 dark:drop-shadow-none">
       <div className="flex flex-grow items-center justify-between px-4 py-4 shadow-2 md:px-6 2xl:px-11">
         <div className="flex items-center gap-4">
+          {/* Hamburger menu for mobile */}
+          <button
+            onClick={toggleMobileSidebar}
+            className="flex md:hidden h-8.5 w-8.5 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Toggle mobile menu"
+          >
+            <FiMenu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          </button>
+          
           <BusinessSwitcher />
         </div>
 

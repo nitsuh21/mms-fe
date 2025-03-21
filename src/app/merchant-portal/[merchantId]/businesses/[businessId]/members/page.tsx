@@ -71,9 +71,9 @@ export default function MembersPage({ params }: { params: { businessId: string }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Members</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Members</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             Manage your business members and their subscriptions
           </p>
@@ -82,7 +82,7 @@ export default function MembersPage({ params }: { params: { businessId: string }
         {hasPermission(PERMISSIONS.MANAGE_MEMBERS) && (
           <button
             onClick={() => setShowAddMember(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
           >
             <FiUserPlus className="h-4 w-4" />
             Add Member
@@ -92,7 +92,7 @@ export default function MembersPage({ params }: { params: { businessId: string }
 
       {/* Add Member Form */}
       {showAddMember && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             Add New Member
           </h2>
@@ -140,15 +140,15 @@ export default function MembersPage({ params }: { params: { businessId: string }
                     methods={methods}
                   />
                 </div>
-                <div className="flex justify-end gap-3">
+                <div className="flex flex-col sm:flex-row justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setShowAddMember(false)}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    className="w-full sm:w-auto rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
-                  <SubmitButton>Add Member</SubmitButton>
+                  <SubmitButton className="w-full sm:w-auto">Add Member</SubmitButton>
                 </div>
               </>
             )}
@@ -174,11 +174,11 @@ export default function MembersPage({ params }: { params: { businessId: string }
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Subscription</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Next Payment</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Next Payment</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
@@ -187,19 +187,22 @@ export default function MembersPage({ params }: { params: { businessId: string }
                   key={member.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {member.name}
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <div>
+                      <div>{member.name}</div>
+                      <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400">{member.email}</div>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="hidden sm:table-cell px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {member.email}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {member.phone}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {member.subscriptionType}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                  <td className="px-4 py-3 text-sm">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
                         member.status === 'active'
@@ -212,7 +215,7 @@ export default function MembersPage({ params }: { params: { businessId: string }
                       {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {member.nextPayment}
                   </td>
                 </tr>
