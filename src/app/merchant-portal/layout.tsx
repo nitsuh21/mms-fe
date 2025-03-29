@@ -1,7 +1,9 @@
 "use client";
 
-import { AuthProvider } from '@/lib/auth/rbac';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function MerchantLayout({
   children,
@@ -9,12 +11,44 @@ export default function MerchantLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider role="business_admin">
+    <AuthProvider>
       <NotificationProvider>
-        <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
+        <MerchantLayoutContent>
           {children}
-        </div>
+        </MerchantLayoutContent>
       </NotificationProvider>
     </AuthProvider>
+  );
+}
+
+function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white"></div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    router.push('/auth/signin');
+    return null;
+  }
+
+  // Check if user has proper role
+  // if (user?.role !== 'PA' && user?.role !== 'TA') {
+  //   router.push('/auth/signin');
+  //   return null;
+  // }
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
+      {children}
+    </div>
   );
 }

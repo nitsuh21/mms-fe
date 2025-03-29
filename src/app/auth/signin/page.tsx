@@ -4,11 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiMail, FiLock } from 'react-icons/fi';
-import { authService } from '@/services/authService';
-import { SignInData } from '@/types/auth';
+import { AuthService } from '@/services/authService';
 
 export default function SignInPage() {
-  const [formData, setFormData] = useState<SignInData>({
+  const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
@@ -27,25 +26,31 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      const response = await authService.signIn(formData);
+      const response = await AuthService.signIn(formData);
       
       // Store tokens and user info
-      localStorage.setItem('accessToken', response.access);
-      localStorage.setItem('refreshToken', response.refresh);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Redirect to dashboard
-      router.push('/merchant-portal/123/platform/dashboard');
+      AuthService.setTokens({
+        access: response.access,
+        refresh: response.refresh
+      });
+      AuthService.setUser(response.user);
+
+      // Redirect to the user's platform dashboard
+      if (response.user?.id) {
+        router.push(`/merchant-portal/${response.user.id}/platform/dashboard`);
+      } else {
+        router.push('/merchant-portal/');
+      }
     } catch (err: any) {
       console.error('Signin error:', err);
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid email or password');
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = authService.getGoogleAuthUrl();
+    window.location.href = AuthService.getGoogleAuthUrl();
   };
 
   return (
