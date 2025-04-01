@@ -1,246 +1,215 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiPlus, FiEdit, FiTrash2, FiMail } from "react-icons/fi";
-
-// Mock data for team members
-const mockTeamMembers = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    role: "Admin",
-    status: "active",
-    lastActive: "2 hours ago",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    role: "Manager",
-    status: "active",
-    lastActive: "1 day ago",
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    role: "Support",
-    status: "inactive",
-    lastActive: "2 weeks ago",
-  },
-  {
-    id: "4",
-    name: "Emily Wilson",
-    email: "emily.wilson@example.com",
-    role: "Manager",
-    status: "active",
-    lastActive: "3 hours ago",
-  },
-  {
-    id: "5",
-    name: "David Lee",
-    email: "david.lee@example.com",
-    role: "Support",
-    status: "active",
-    lastActive: "Just now",
-  },
-];
+import { useParams } from "next/navigation";
+import { teamService } from "@/services/teamService";
+import type { TeamMember } from "@/types/team";
 
 export default function TeamsPage() {
+  const { merchantId } = useParams() as { merchantId: string };
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({
+    email: "",
+    role: "staff" as const
+  });
 
-  const filteredMembers = mockTeamMembers.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.role.toLowerCase().includes(searchTerm.toLowerCase())
+  const loadBusinessMembers = async () => {
+    try {
+      const response = await teamService.getBusinessMembers(Number(merchantId));
+      setMembers(response);
+    } catch (error) {
+      console.error("Failed to load business members:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadBusinessMembers();
+  }, []);
+
+  const handleAddMember = async () => {
+    try {
+      await teamService.addBusinessMember(
+        Number(merchantId),
+        newMember.email,
+        newMember.role
+      );
+      setShowAddMember(false);
+      setNewMember({ email: "", role: "staff" });
+      loadBusinessMembers();
+    } catch (error) {
+      console.error("Failed to add team member:", error);
+    }
+  };
+
+  const handleUpdateMember = async (
+    businessId: number,
+    memberId: number,
+    role: TeamMember["role"],
+    isActive: boolean
+  ) => {
+    try {
+      await teamService.updateBusinessMember(businessId, memberId, role, isActive);
+      loadBusinessMembers();
+    } catch (error) {
+      console.error("Failed to update team member:", error);
+    }
+  };
+
+  const handleRemoveMember = async (businessId: number, memberId: number) => {
+    if (window.confirm("Are you sure you want to remove this team member?")) {
+      try {
+        await teamService.removeBusinessMember(businessId, memberId);
+        loadBusinessMembers();
+      } catch (error) {
+        console.error("Failed to remove team member:", error);
+      }
+    }
+  };
+
+  const filteredMembers = members.filter(member =>
+    member.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.user.last_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Team Management</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Manage your platform team members and permissions
-          </p>
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Team Members</h1>
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setShowAddMember(true)}
+            className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            <FiPlus size={16} />
+            <span>Add Member</span>
+          </button>
         </div>
-
-        <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600">
-          <FiPlus className="h-4 w-4" />
-          Add Team Member
-        </button>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white shadow-default dark:border-gray-700 dark:bg-gray-800">
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search team members..."
-              className="w-full rounded-lg border border-gray-200 bg-transparent py-2 pl-4 pr-10 outline-none focus:border-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:focus:border-brand-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <span className="absolute right-4 top-2.5 text-gray-500 dark:text-gray-400">
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+      {showAddMember && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add New Member</h2>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input
+                type="email"
+                value={newMember.email}
+                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <select
+                value={newMember.role}
+                onChange={(e) => setNewMember({ ...newMember, role: e.target.value as typeof newMember.role })}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                ></path>
-              </svg>
-            </span>
+                <option value="staff">Staff</option>
+                <option value="manager">Manager</option>
+                <option value="owner">Owner</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => {
+                  setShowAddMember(false);
+                  setNewMember({ email: "", role: "staff" });
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddMember}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Add Member
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Desktop view - table */}
-        <div className="hidden md:block">
-          <div className="grid grid-cols-6 border-b border-gray-200 py-4 px-6 dark:border-gray-700">
-            <div className="col-span-2">
-              <h5 className="text-sm font-medium uppercase text-gray-700 dark:text-gray-300">Name / Email</h5>
-            </div>
-            <div className="col-span-1">
-              <h5 className="text-sm font-medium uppercase text-gray-700 dark:text-gray-300">Role</h5>
-            </div>
-            <div className="col-span-1">
-              <h5 className="text-sm font-medium uppercase text-gray-700 dark:text-gray-300">Status</h5>
-            </div>
-            <div className="col-span-1">
-              <h5 className="text-sm font-medium uppercase text-gray-700 dark:text-gray-300">Last Active</h5>
-            </div>
-            <div className="col-span-1">
-              <h5 className="text-sm font-medium uppercase text-gray-700 dark:text-gray-300">Actions</h5>
-            </div>
-          </div>
+      <div className="relative mb-6">
+        <input
+          type="text"
+          placeholder="Search team members..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-          {filteredMembers.length > 0 ? (
-            filteredMembers.map((member, index) => (
-              <div
-                key={`desktop-${member.id}`}
-                className={`grid grid-cols-6 ${
-                  index === filteredMembers.length - 1
-                    ? ""
-                    : "border-b border-gray-200 dark:border-gray-700"
-                } py-4 px-6`}
-              >
-                <div className="col-span-2">
-                  <h5 className="font-medium text-gray-900 dark:text-white">
-                    {member.name}
-                  </h5>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {member.email}
-                  </p>
-                </div>
-                <div className="col-span-1">
-                  <p className="text-gray-700 dark:text-gray-300">{member.role}</p>
-                </div>
-                <div className="col-span-1">
-                  <span
-                    className={`inline-flex rounded-full py-1 px-3 text-sm font-medium ${
-                      member.status === "active"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    }`}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Role
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredMembers.map((member) => (
+              <tr key={member.id}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {member.user.first_name} {member.user.last_name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {member.user.email}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <select
+                    value={member.role}
+                    onChange={(e) => handleUpdateMember(Number(merchantId), member.id, e.target.value as TeamMember["role"], member.is_active)}
+                    className="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {member.status}
-                  </span>
-                </div>
-                <div className="col-span-1">
-                  <p className="text-gray-700 dark:text-gray-300">{member.lastActive}</p>
-                </div>
-                <div className="col-span-1 flex items-center gap-2">
-                  <button className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400">
-                    <FiMail className="text-lg" />
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={member.is_active}
+                      onChange={(e) => handleUpdateMember(Number(merchantId), member.id, member.role, e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleRemoveMember(Number(merchantId), member.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Remove
                   </button>
-                  <button className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400">
-                    <FiEdit className="text-lg" />
-                  </button>
-                  <button className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400">
-                    <FiTrash2 className="text-lg" />
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="py-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No team members found matching your search.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile view - cards */}
-        <div className="md:hidden">
-          {filteredMembers.length > 0 ? (
-            <div className="space-y-4 p-4">
-              {filteredMembers.map((member) => (
-                <div 
-                  key={`mobile-${member.id}`}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h5 className="font-medium text-gray-900 dark:text-white">
-                        {member.name}
-                      </h5>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {member.email}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex rounded-full py-1 px-3 text-sm font-medium ${
-                        member.status === "active"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
-                    >
-                      {member.status}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Role</p>
-                      <p className="text-gray-700 dark:text-gray-300">{member.role}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Last Active</p>
-                      <p className="text-gray-700 dark:text-gray-300">{member.lastActive}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <button className="p-2 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <FiMail className="text-lg" />
-                    </button>
-                    <button className="p-2 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <FiEdit className="text-lg" />
-                    </button>
-                    <button className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <FiTrash2 className="text-lg" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No team members found matching your search.
-              </p>
-            </div>
-          )}
-        </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

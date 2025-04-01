@@ -336,7 +336,7 @@ export default function Sidebar() {
             Platform
           </h2>
         </div>
-
+{/* 
         <nav className="py-4 px-2">
           <div className="space-y-1">
             {platformNavItems.map((item) => (
@@ -367,7 +367,7 @@ export default function Sidebar() {
               </Link>
             ))}
           </div>
-        </nav>
+        </nav> */}
       </div>
     </>
   );

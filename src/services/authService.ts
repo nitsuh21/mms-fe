@@ -32,14 +32,15 @@ export class AuthService {
 
   static async signIn(credentials: { email: string; password: string }): Promise<AuthResponse> {
     try {
+      this.clearTokens();
       const response = await api.post('/auth/signin/', credentials);
       
       // Store tokens and user info
-      AuthService.setTokens({
+      this.setTokens({
         access: response.data.access,
         refresh: response.data.refresh
       });
-      AuthService.setUser(response.data.user);
+      this.setUser(response.data.user);
       
       return response.data;
     } catch (error: any) {
@@ -82,12 +83,26 @@ export class AuthService {
 
   static async logout() {
     try {
-      await api.post('/auth/signout/');
+      const refreshToken = this.getRefreshToken();
+      
+      if (refreshToken) {
+        // Try to refresh token first to make sure we have a valid access token
+        await this.refreshToken();
+        
+        // Now use the access token to sign out
+        const response = await api.post('/auth/signout/', {}, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          withCredentials: true
+        });
+        console.log('Logout successful:', response.data);
+      }
     } catch (error) {
       console.error('Logout error:', error);
+    } finally {
+      this.clearTokens();
     }
-
-    AuthService.clearTokens();
   }
 
   static getGoogleAuthUrl(): string {

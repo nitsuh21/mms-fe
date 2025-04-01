@@ -7,7 +7,7 @@ import { BusinessSwitcher } from "@/components/common/BusinessSwitcher";
 import { useTheme } from "@/context/ThemeContext";
 import { FiMoon, FiSun, FiBell, FiUser, FiSettings, FiLogOut, FiMenu } from "react-icons/fi";
 import { useAuth } from "@/lib/auth/rbac";
-import { authService } from "@/services/authService";
+import { AuthService } from "@/services/authService";
 import { useParams } from "next/navigation";
 import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, ROUTES } from "@/config";
 import { useSidebar } from "@/context/SidebarContext";
@@ -19,7 +19,6 @@ const Header = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const params = useParams();
-  const merchantId = params.merchantId as string;
   const { user } = useAuth();
   const { toggleMobileSidebar, isExpanded } = useSidebar();
 
@@ -39,9 +38,9 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await authService.signout();
+      await AuthService.logout();
       // Redirect to login page
-      router.push(ROUTES.LOGIN);
+      router.push(ROUTES.SIGN_IN);
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -108,7 +107,7 @@ const Header = () => {
                   </div>
                   
                   <Link
-                    href={`/merchant-portal/${merchantId}/platform/settings?tab=account`}
+                    href={`/merchant-portal/${user?.id}/platform/settings?tab=account`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setShowUserMenu(false)}
                   >
@@ -117,7 +116,7 @@ const Header = () => {
                   </Link>
                   
                   <Link
-                    href={`/merchant-portal/${merchantId}/platform/settings`}
+                    href={`/merchant-portal/${user?.id}/platform/settings`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setShowUserMenu(false)}
                   >

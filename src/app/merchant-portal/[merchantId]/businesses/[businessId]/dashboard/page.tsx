@@ -1,191 +1,270 @@
 "use client";
 
-import { useState } from 'react';
-import { FiDownload, FiTrendingUp, FiTrendingDown, FiDollarSign, FiUsers } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiUsers, FiPieChart, FiCreditCard, FiAlertCircle, FiBell } from 'react-icons/fi';
+import { platformService } from '@/services/platformService';
 
-interface ReportMetric {
+interface Metric {
   label: string;
   value: string | number;
   change: number;
   trend: 'up' | 'down' | 'neutral';
+  icon: React.ElementType;
+  color: string;
 }
 
-interface TopPlan {
+interface MembershipPlan {
   name: string;
-  revenue: number;
   subscribers: number;
-  percentageTotal: number;
+  revenue: number;
+  growth: number;
 }
 
-// Mock data - replace with API call
-const mockMetrics: ReportMetric[] = [
-  {
-    label: 'Total Revenue',
-    value: '$12,345.67',
-    change: 12.5,
-    trend: 'up',
-  },
-  {
-    label: 'Active Members',
-    value: 234,
-    change: 5.2,
-    trend: 'up',
-  },
-  {
-    label: 'New Subscriptions',
-    value: 45,
-    change: -2.8,
-    trend: 'down',
-  },
-  {
-    label: 'Average Revenue Per User',
-    value: '$52.76',
-    change: 8.1,
-    trend: 'up',
-  },
-];
-
-const mockTopPlans: TopPlan[] = [
-  {
-    name: 'Premium Plan',
-    revenue: 5678.90,
-    subscribers: 89,
-    percentageTotal: 45,
-  },
-  {
-    name: 'Basic Plan',
-    revenue: 3456.78,
-    subscribers: 145,
-    percentageTotal: 35,
-  },
-  {
-    name: 'Pro Plan',
-    revenue: 2345.67,
-    subscribers: 34,
-    percentageTotal: 20,
-  },
-];
+interface MemberActivity {
+  name: string;
+  joinDate: string;
+  plan: string;
+  status: 'active' | 'pending' | 'expired';
+}
 
 export default function DashboardPage() {
-  const [dateRange, setDateRange] = useState('30d');
+  const params = useParams();
+  const businessId = params?.businessId as string;
+  const merchantId = params?.merchantId as string;
+
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [topPlans, setTopPlans] = useState<MembershipPlan[]>([]);
+  const [recentMembers, setRecentMembers] = useState<MemberActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch dashboard metrics
+        const report = await platformService.getReport(businessId);
+        
+        // Fetch membership plans
+        const plans = await platformService.getMembershipPlans(businessId);
+        
+        // Fetch recent member activities
+        const activities = await platformService.getMemberActivities(businessId);
+
+        // Update state
+        setMetrics([
+          {
+            label: 'Total Revenue',
+            value: `$${report.totalRevenue.toFixed(2)}`,
+            change: report.revenueChange,
+            trend: report.revenueChange >= 0 ? 'up' : 'down',
+            icon: FiDollarSign,
+            color: report.revenueChange >= 0 ? '#34D399' : '#EF4444'
+          },
+          {
+            label: 'Active Members',
+            value: report.activeMembers,
+            change: report.memberChange,
+            trend: report.memberChange >= 0 ? 'up' : 'down',
+            icon: FiUsers,
+            color: report.memberChange >= 0 ? '#34D399' : '#EF4444'
+          },
+          {
+            label: 'New Subscriptions',
+            value: report.newSubscriptions,
+            change: report.subscriptionChange,
+            trend: report.subscriptionChange >= 0 ? 'up' : 'down',
+            icon: FiTrendingUp,
+            color: report.subscriptionChange >= 0 ? '#34D399' : '#EF4444'
+          },
+          {
+            label: 'Churned Members',
+            value: report.churnedMembers,
+            change: report.churnChange,
+            trend: 'down',
+            icon: FiTrendingDown,
+            color: '#EF4444'
+          },
+          {
+            label: 'ARPU',
+            value: `$${report.arpu.toFixed(2)}`,
+            change: report.arpuChange,
+            trend: report.arpuChange >= 0 ? 'up' : 'down',
+            icon: FiDollarSign,
+            color: report.arpuChange >= 0 ? '#34D399' : '#EF4444'
+          },
+          {
+            label: 'Pending Payments',
+            value: `$${report.pendingPayments.toFixed(2)}`,
+            change: report.paymentIssues,
+            trend: 'neutral',
+            icon: FiAlertCircle,
+            color: '#FBBF24'
+          }
+        ]);
+
+        setTopPlans(plans);
+        setRecentMembers(activities);
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard data:', error);
+        setError(error.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [businessId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-red-500">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            View your business performance and analytics
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="12m">Last 12 months</option>
-          </select>
-          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600">
-            <FiDownload className="h-4 w-4" />
-            Export Report
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Membership Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700">
+            <FiBell className="h-4 w-4" />
+            View Notifications
           </button>
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {mockMetrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.label}</p>
-              {metric.trend === 'up' ? (
-                <FiTrendingUp className="h-5 w-5 text-green-500" />
-              ) : metric.trend === 'down' ? (
-                <FiTrendingDown className="h-5 w-5 text-red-500" />
-              ) : null}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm dark:shadow-dark-card">
+            <div className="flex items-center gap-2 mb-4">
+              <metric.icon className="h-6 w-6 text-gray-400" />
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{metric.label}</h3>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
-            <div className="mt-2">
-              <span
-                className={`inline-flex items-center text-sm font-medium ${
-                  metric.trend === 'up'
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}
-              >
-                {metric.trend === 'up' ? '+' : ''}
-                {metric.change}%
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
+              <span className={`text-sm font-medium ${metric.color}`}>
+                {metric.trend === 'up' ? '🔼' : metric.trend === 'down' ? '🔽' : '➡️'}
+                {metric.change}% vs previous period
               </span>
-              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">vs previous period</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Top Performing Plans */}
-      <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <div className="border-b border-gray-200 px-4 sm:px-6 py-4 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Top Performing Plans
-          </h2>
+      <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm dark:shadow-dark-card">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Top Performing Plans</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-dark-border">
+                <th className="py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Plan Name</th>
+                <th className="py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Subscribers</th>
+                <th className="py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Revenue</th>
+                <th className="py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Growth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topPlans.map((plan) => (
+                <tr key={plan.name} className="border-b border-gray-200 dark:border-dark-border">
+                  <td className="py-4 text-sm text-gray-900 dark:text-white">{plan.name}</td>
+                  <td className="py-4 text-sm text-gray-900 dark:text-white">{plan.subscribers}</td>
+                  <td className="py-4 text-sm text-gray-900 dark:text-white">${plan.revenue.toFixed(2)}</td>
+                  <td className="py-4 text-sm">
+                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                      plan.growth >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {plan.growth >= 0 ? '🔼' : '🔽'} {Math.abs(plan.growth)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="p-4 sm:p-6">
-          <div className="space-y-6">
-            {mockTopPlans.map((plan) => (
-              <div key={plan.name}>
-                <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">{plan.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {plan.subscribers} subscribers
-                    </p>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      ${plan.revenue.toFixed(2)}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {plan.percentageTotal}% of total
-                    </p>
-                  </div>
+      </div>
+
+      {/* Member Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm dark:shadow-dark-card">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Recent Member Signups</h2>
+          <div className="space-y-4">
+            {recentMembers.map((member) => (
+              <div key={member.name} className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{member.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Joined: {member.joinDate}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Plan: {member.plan}</p>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className="h-2 rounded-full bg-brand-600 dark:bg-brand-500"
-                    style={{ width: `${plan.percentageTotal}%` }}
-                  />
-                </div>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  member.status === 'active' ? 'bg-green-100 text-green-800' :
+                  member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                </span>
               </div>
             ))}
+            <button className="mt-4 text-sm text-brand-600 hover:text-brand-500">View All Members</button>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm dark:shadow-dark-card">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Expiring Soon Members</h2>
+          <div className="space-y-4">
+            {recentMembers
+              .filter(member => member.status === 'active')
+              .map((member) => (
+                <div key={member.name} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{member.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Membership expires in 7 days</p>
+                  </div>
+                  <button className="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700">
+                    Send Reminder
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       </div>
 
-      {/* Revenue Chart */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Revenue Over Time</h2>
-        <div className="flex h-48 sm:h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Revenue chart will be implemented here
-          </p>
-        </div>
-      </div>
-
-      {/* Member Activity Chart */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Member Activity</h2>
-        <div className="flex h-48 sm:h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Member activity chart will be implemented here
-          </p>
+      {/* Quick Actions Panel */}
+      <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm dark:shadow-dark-card">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700">
+            <FiUsers className="h-4 w-4" />
+            Add New Member
+          </button>
+          <button className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+            <FiPieChart className="h-4 w-4" />
+            Create New Plan
+          </button>
+          <button className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+            <FiBell className="h-4 w-4" />
+            Send Bulk Notification
+          </button>
+          <button className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
+            <FiCreditCard className="h-4 w-4" />
+            Download Report
+          </button>
         </div>
       </div>
     </div>

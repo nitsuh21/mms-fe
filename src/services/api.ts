@@ -10,13 +10,14 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   // Enable sending cookies with requests
-  withCredentials: true
+  withCredentials: true,
+  timeout: 10000,
 });
 
 // Extract tenant ID from URL path
 const extractTenantId = () => {
   const path = window.location.pathname;
-  const match = path.match(/\/merchant-portal\/(\d+)\/platform/);
+  const match = path.match(/\/merchant-portal\/(\d+|\w+)\/platform/);
   return match ? match[1] : null;
 };
 
@@ -47,26 +48,23 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
+      
       try {
-        const refreshToken = AuthService.getRefreshToken();
-        if (!refreshToken) {
-          throw new Error('Refresh token not found');
+        // Try to refresh token
+        await AuthService.refreshToken();
+        
+        if (originalRequest.headers) {
+          const newAccessToken = AuthService.getAccessToken();
+          if (newAccessToken) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return api(originalRequest);
+          }
         }
-
-        const response = await api.post<{ access: string }>(
-          '/auth/token/refresh/',
-          { refresh: refreshToken }
-        );
-
-        AuthService.setTokens({
-          access: response.data.access,
-          refresh: refreshToken
-        });
-        originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
-        return api(originalRequest);
       } catch (refreshError) {
-        AuthService.clearTokens();
-        window.location.href = '/auth/signin';
+        console.error('Token refresh error:', refreshError);
+        setTimeout(() => {
+          window.location.href = '/auth/signin';
+        }, 5000);
         return Promise.reject(refreshError);
       }
     }
@@ -83,8 +81,7 @@ api.interceptors.response.use(
       // Handle different error statuses
       switch (response.status) {
         case 401:
-          AuthService.clearTokens();
-          window.location.href = '/auth/signin';
+          // Don't immediately clear tokens - let the refresh interceptor handle it
           break;
         case 403:
           throw new Error('Access denied');

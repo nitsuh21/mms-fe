@@ -1,4 +1,7 @@
-import api from './api';
+import axios from 'axios';
+import type { PlatformReport, PlatformBusinessSummary, PlatformTeamMember, MembershipPlan, MemberActivity } from '@/types/platform';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export interface PlatformDashboardData {
   total_business: number,
@@ -17,25 +20,6 @@ export interface PlatformDashboardData {
   }>;
 }
 
-export interface PlatformBusinessSummary {
-  id: string;
-  name: string;
-  owner: string;
-  location: string;
-  status: string;
-  memberCount: number;
-  revenue: string;
-}
-
-export interface PlatformTeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  business: string;
-  lastActive: string;
-}
-
 export interface PlatformSettings {
   id: string;
   name: string;
@@ -50,9 +34,9 @@ export interface PlatformSettings {
 
 export const platformService = {
   // Get platform dashboard data
-  getDashboard: async (): Promise<PlatformDashboardData> => {
+  async getDashboard(): Promise<PlatformDashboardData> {
     try {
-      const response = await api.get(`/merchants/dashboard/`);
+      const response = await axios.get(`${API_BASE_URL}/merchants/dashboard/`);
       console.log("dashboard response", response)
       return response.data;
     } catch (error) {
@@ -72,9 +56,9 @@ export const platformService = {
   },
 
   // Get all businesses for the platform
-  getBusinesses: async (merchantId: string): Promise<PlatformBusinessSummary[]> => {
+  async getBusinesses(merchantId: string): Promise<PlatformBusinessSummary[]> {
     try {
-      const response = await api.get(`/api/platform/${merchantId}/businesses/`);
+      const response = await axios.get(`${API_BASE_URL}/api/platform/${merchantId}/businesses/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching platform businesses:', error);
@@ -83,9 +67,9 @@ export const platformService = {
   },
 
   // Get all team members across businesses
-  getTeamMembers: async (merchantId: string): Promise<PlatformTeamMember[]> => {
+  async getTeamMembers(merchantId: string): Promise<PlatformTeamMember[]> {
     try {
-      const response = await api.get(`/api/platform/${merchantId}/team-members/`);
+      const response = await axios.get(`${API_BASE_URL}/api/platform/${merchantId}/team-members/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching platform team members:', error);
@@ -94,9 +78,9 @@ export const platformService = {
   },
 
   // Get platform settings
-  getSettings: async (merchantId: string): Promise<PlatformSettings> => {
+  async getSettings(merchantId: string): Promise<PlatformSettings> {
     try {
-      const response = await api.get(`/api/platform/${merchantId}/settings/`);
+      const response = await axios.get(`${API_BASE_URL}/api/platform/${merchantId}/settings/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching platform settings:', error);
@@ -115,15 +99,121 @@ export const platformService = {
   },
 
   // Update platform settings
-  updateSettings: async (merchantId: string, data: Partial<PlatformSettings>): Promise<PlatformSettings> => {
+  async updateSettings(merchantId: string, data: Partial<PlatformSettings>): Promise<PlatformSettings> {
     try {
-      const response = await api.patch(`/api/platform/${merchantId}/settings/`, data);
+      const response = await axios.patch(`${API_BASE_URL}/api/platform/${merchantId}/settings/`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating platform settings:', error);
       throw error;
     }
-  }
+  },
+
+  // Get report for a business
+  async getReport(businessId: string): Promise<PlatformReport> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/report/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching report for business:', error);
+      throw error;
+    }
+  },
+
+  // Get membership plans for a business
+  async getMembershipPlans(businessId: string): Promise<MembershipPlan[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/plans/`);
+      return response.data.map((plan: any) => ({
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: plan.price,
+        duration: plan.duration,
+        features: plan.features,
+        subscribers: plan.subscribers,
+        revenue: plan.revenue,
+        growth: plan.growth
+      }));
+    } catch (error) {
+      console.error('Error fetching membership plans for business:', error);
+      throw error;
+    }
+  },
+
+  // Get member activities for a business
+  async getMemberActivities(businessId: string): Promise<MemberActivity[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/activities/`);
+      return response.data.map((activity: any) => ({
+        id: activity.id,
+        name: activity.name,
+        email: activity.email,
+        plan: activity.plan,
+        status: activity.status,
+        joinDate: activity.joinDate,
+        expirationDate: activity.expirationDate
+      }));
+    } catch (error) {
+      console.error('Error fetching member activities for business:', error);
+      throw error;
+    }
+  },
+
+  // Get all businesses
+  async getAllBusinesses(): Promise<PlatformBusinessSummary[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all businesses:', error);
+      throw error;
+    }
+  },
+
+  // Get team members for a business
+  async getBusinessTeamMembers(businessId: string): Promise<PlatformTeamMember[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/team/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching team members for business:', error);
+      throw error;
+    }
+  },
+
+  // Get reports for a business
+  async getBusinessReports(businessId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/reports/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching reports for business:', error);
+      throw error;
+    }
+  },
+
+  // Get settings for a business
+  async getBusinessSettings(businessId: string): Promise<any> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/settings/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching settings for business:', error);
+      throw error;
+    }
+  },
+
+  // Update settings for a business
+  async updateBusinessSettings(businessId: string, settings: any): Promise<any> {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/businesses/${businessId}/settings/`, settings);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating settings for business:', error);
+      throw error;
+    }
+  },
 };
 
 export default platformService;

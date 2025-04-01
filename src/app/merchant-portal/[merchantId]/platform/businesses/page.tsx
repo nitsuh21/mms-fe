@@ -115,7 +115,7 @@ export default function PlatformBusinessesPage() {
             className="grid grid-cols-8 border-b border-gray-200 py-4 px-6 dark:border-gray-700"
           >
             <div className="col-span-2">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{business.name}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white"><a href={`/merchant-portal/${merchantId}/businesses/${business.id}/dashboard`}>{business.name}</a></p>
             </div>
             <div className="col-span-1">
               <p className="text-sm text-gray-500 dark:text-gray-400">{business.contact_email}</p>
