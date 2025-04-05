@@ -135,10 +135,10 @@ export default function Sidebar() {
   }, []);
 
   // Determine if we're in a business context
-  const isInBusinessContext = pathname.includes(`/merchant-portal/${merchantId}/businesses/`) && businessId;
+  const isInBusinessContext = pathname?.includes(`/merchant-portal/${merchantId}/businesses/`) && businessId;
   
   // Determine if we're in a platform context
-  const isInPlatformContext = pathname.includes(`/merchant-portal/${merchantId}/platform/`);
+  const isInPlatformContext = pathname?.includes(`/merchant-portal/${merchantId}/platform/`);
 
   // If we're in platform context, don't show the sidebar
   if (isInPlatformContext) {
@@ -149,10 +149,10 @@ export default function Sidebar() {
   const isActive = (href: string) => {
     if (isInBusinessContext && !href.startsWith("platform/")) {
       const fullPath = `/merchant-portal/${merchantId}/businesses/${businessId}/${href}`;
-      return pathname === fullPath || pathname.startsWith(`${fullPath}/`);
+      return pathname === fullPath || pathname?.startsWith(`${fullPath}/`);
     } else {
       const fullPath = `/merchant-portal/${merchantId}/${href}`;
-      return pathname === fullPath || pathname.startsWith(`${fullPath}/`);
+      return pathname === fullPath || pathname?.startsWith(`${fullPath}/`);
     }
   };
 
@@ -229,21 +229,32 @@ export default function Sidebar() {
               "text-lg font-medium text-gray-900 dark:text-white",
               !isExpanded && "hidden md:block md:text-xs md:mt-2"
             )}>
-              {businessId.includes("fitness") ? "Fitness Studio" :
-               businessId.includes("yoga") ? "Yoga Center" :
-               businessId.includes("dance") ? "Dance Academy" : 
-               businessId}
+              
             </h2>
-            <Link
-              href={`/merchant-portal/${merchantId}/dashboard`}
-              className={cn(
-                "mt-2 flex items-center text-sm text-gray-600 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-500",
-                !isExpanded && "hidden md:hidden"
-              )}
-            >
-              <FiHome className="mr-1 h-4 w-4" />
-              Back to Merchant Dashboard
-            </Link>
+            {isMobile && (
+              <button
+                onClick={() => {
+                  window.location.href = `/merchant-portal/${merchantId}/platform/dashboard`;
+                  toggleMobileSidebar();
+                }}
+                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <FiChevronLeft className="h-5 w-5" />
+                Back to Merchant Dashboard
+              </button>
+            )}
+            {!isMobile && (
+              <Link
+                href={`/merchant-portal/${merchantId}/platform/dashboard`}
+                className={cn(
+                  "mt-2 flex items-center text-sm text-gray-600 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-500",
+                  !isExpanded && "hidden md:hidden"
+                )}
+              >
+                <FiHome className="mr-1 h-4 w-4" />
+                Back to Merchant Dashboard
+              </Link>
+            )}
           </div>
         ) : (
           // Merchant context header

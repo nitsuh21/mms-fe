@@ -1,14 +1,14 @@
 "use client";
 
 import React from 'react';
-import { useForm, UseFormReturn, FieldValues, Path, RegisterOptions } from 'react-hook-form';
+import { useForm, UseFormReturn, FieldValues, Path, RegisterOptions, DefaultValues } from 'react-hook-form';
 import { FiAlertCircle } from 'react-icons/fi';
 
 interface FormProps<TFormValues extends FieldValues> {
-  onSubmit: (data: TFormValues) => void;
+  onSubmit: (data: TFormValues) => void | Promise<void>;
   children: (methods: UseFormReturn<TFormValues>) => React.ReactNode;
   className?: string;
-  defaultValues?: Partial<TFormValues>;
+  defaultValues?: TFormValues;
 }
 
 export function Form<TFormValues extends FieldValues>({
@@ -17,7 +17,9 @@ export function Form<TFormValues extends FieldValues>({
   className = '',
   defaultValues,
 }: FormProps<TFormValues>) {
-  const methods = useForm<TFormValues>({ defaultValues });
+  const methods = useForm<TFormValues>({
+    defaultValues: defaultValues as DefaultValues<TFormValues>,
+  });
 
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className={className}>
@@ -30,9 +32,9 @@ export function Form<TFormValues extends FieldValues>({
 interface InputFieldProps<TFormValues extends FieldValues> {
   name: Path<TFormValues>;
   label: string;
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel';
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'datetime-local';
   placeholder?: string;
-  rules?: RegisterOptions;
+  rules?: RegisterOptions<TFormValues>;
   methods: UseFormReturn<TFormValues>;
   className?: string;
   description?: string;
@@ -117,7 +119,7 @@ export function SelectField<TFormValues extends FieldValues>({
         {label}
       </label>
       <select
-        {...register(name, rules)}
+        {...register(name, rules as RegisterOptions<TFormValues, Path<TFormValues>>)}
         id={name}
         className={`w-full rounded-lg border bg-white px-4 py-2.5 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 ${
           error
@@ -174,7 +176,7 @@ export function CheckboxField<TFormValues extends FieldValues>({
       <div className="flex items-start">
         <div className="flex h-5 items-center">
           <input
-            {...register(name, rules)}
+            {...register(name, rules as RegisterOptions<TFormValues, Path<TFormValues>>)}
             type="checkbox"
             id={name}
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:focus:ring-brand-400"

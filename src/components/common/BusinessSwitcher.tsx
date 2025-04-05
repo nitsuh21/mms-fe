@@ -91,7 +91,7 @@ export const BusinessSwitcher = () => {
   const currentBusiness = Array.isArray(businesses)
     ? businesses.find(b => b.id === merchantId) || {
         id: merchantId,
-        name: "Loading...",
+        name: "Select a business",
         address: "",
         contact_email: "",
         owner: "",
@@ -102,7 +102,7 @@ export const BusinessSwitcher = () => {
       }
     : {
         id: merchantId,
-        name: "Loading...",
+        name: "Select a business",
         address: "",
         contact_email: "",
         owner: "",
@@ -116,7 +116,7 @@ export const BusinessSwitcher = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-sm hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
+        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
       >
         <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-100 font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
           {getInitials(currentBusiness.name)}
@@ -126,9 +126,9 @@ export const BusinessSwitcher = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-lg dark:border-dark-border dark:bg-dark-card">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-lg dark:border-gray-600 dark:bg-gray-800">
           {loading ? (
-            <div className="p-4 text-center text-gray-500 dark:text-dark-text">
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               Loading businesses...
             </div>
           ) : error ? (
@@ -138,15 +138,15 @@ export const BusinessSwitcher = () => {
           ) : (
             <>
               {/* Search Box */}
-              <div className="border-b border-gray-200 p-2 dark:border-dark-border">
+              <div className="border-b border-gray-200 p-2 dark:border-gray-600">
                 <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted" />
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search businesses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-md border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text dark:placeholder-dark-muted"
+                    className="w-full rounded-md border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-brand-500 dark:focus:ring-brand-500"
                   />
                 </div>
               </div>
@@ -156,7 +156,7 @@ export const BusinessSwitcher = () => {
                   <button
                     key={business.id}
                     onClick={() => handleBusinessSwitch(business.id)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-dark-text dark:hover:bg-dark-bg"
+                    className="flex w-full items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-100 font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
@@ -164,7 +164,7 @@ export const BusinessSwitcher = () => {
                       </span>
                       <div className="text-left">
                         <p className="font-medium">{business.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-dark-muted">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {business.location || "No location"}
                         </p>
                       </div>
@@ -178,10 +178,10 @@ export const BusinessSwitcher = () => {
                 ))}
               </div>
               
-              <div className="border-t border-gray-200 p-2 dark:border-dark-border">
+              <div className="border-t border-gray-200 p-2 dark:border-gray-600">
                 <Link
                   href={`/merchant-portal/${merchantId}/platform/business/new`}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-dark-text dark:hover:bg-dark-bg"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
                   <FiPlus className="h-4 w-4" />
                   <span>Add Business</span>

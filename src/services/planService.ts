@@ -1,156 +1,218 @@
-import api from './api';
+import api from "./api";
+
+export interface Discount {
+  id: string;
+  business: string;
+  name: string;
+  code: string;
+  description: string;
+  discount_type: 'P' | 'F';
+  discount_value: string;
+  discount_category: 'P' | 'D';
+  is_recurring: 'O' | 'R';
+  cycle_limit?: string;
+  valid_from: string;
+  valid_until: string;
+  scope: 'A' | 'S';
+  specific_plans?: string[];
+  max_uses: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface SubscriptionPlan {
+  status: string;
   id: string;
   name: string;
   description: string;
   price: number;
-  billingPeriod: 'monthly' | 'quarterly' | 'annual';
-  features: string[];
-  activeSubscribers: number;
-  status: 'active' | 'draft' | 'archived';
+  currency: string;
+  interval: 'D' | 'W' | 'M' | 'Y';
+  trial_days: number;
+  features: Record<string, boolean>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  discounts?: Discount[];
+  activeSubscribers?: number;
 }
 
 export interface PlanCreateData {
   name: string;
   description: string;
   price: number;
-  billingPeriod: 'monthly' | 'quarterly' | 'annual';
-  features: string[];
-  status?: 'active' | 'draft' | 'archived';
+  currency: string;
+  interval: 'D' | 'W' | 'M' | 'Y';
+  trial_days: number;
+  features: Record<string, boolean>;
+  is_active?: boolean;
 }
 
 export interface PlanUpdateData {
   name?: string;
   description?: string;
   price?: number;
-  billingPeriod?: 'monthly' | 'quarterly' | 'annual';
-  features?: string[];
-  status?: 'active' | 'draft' | 'archived';
+  currency?: string;
+  interval?: 'D' | 'W' | 'M' | 'Y';
+  trial_days?: number;
+  features?: Record<string, boolean>;
+  is_active?: boolean;
+}
+
+export interface Plan {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  interval: 'D' | 'W' | 'M' | 'Y';
+  trial_days: number;
+  features: Record<string, boolean>;
+  is_active: boolean;
+  business: string;
+  discounts?: Discount[];
+  activeSubscribers?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePlanData {
+  name: string;
+  description: string;
+  business: string;
+  interval: 'D' | 'W' | 'M' | 'Y';
+  price: number;
+  currency: string;
+  trial_days: number;
+  features: Record<string, boolean>;
+  is_active?: boolean;
+}
+
+export interface UpdatePlanData {
+  name?: string;
+  description?: string;
+  price?: number;
+  business?: string;
+  currency?: string;
+  interval?: 'D' | 'W' | 'M' | 'Y';
+  trial_days?: number;
+  features?: Record<string, boolean>;
+  is_active?: boolean;
 }
 
 // Helper function to convert billing period to months
-const billingPeriodToMonths = (period: 'monthly' | 'quarterly' | 'annual'): number => {
+const billingPeriodToMonths = (period: 'D' | 'W' | 'M' | 'Y'): number => {
   switch (period) {
-    case 'monthly': return 1;
-    case 'quarterly': return 3;
-    case 'annual': return 12;
-    default: return 1;
+    case 'D': return 1;
+    case 'W': return 7;
+    case 'M': return 30;
+    case 'Y': return 365;
+    default: return 30;
   }
 };
 
 // Helper function to convert months to billing period
-const monthsToBillingPeriod = (months: number): 'monthly' | 'quarterly' | 'annual' => {
-  switch (months) {
-    case 1: return 'monthly';
-    case 3: return 'quarterly';
-    case 12: return 'annual';
-    default: return 'monthly';
-  }
+const monthsToBillingPeriod = (days: number): 'D' | 'W' | 'M' | 'Y' => {
+  if (days === 1) return 'D';
+  if (days === 7) return 'W';
+  if (days === 30) return 'M';
+  return 'Y';
 };
 
-export const planService = {
-  // Get all plans for a merchant
-  getPlans: async (merchantId: string, businessId: string): Promise<SubscriptionPlan[]> => {
-    const response = await api.get(`/tenant/subscription-plans/?tenant=${merchantId}`);
-    
-    return response.data.map((plan: any) => ({
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: plan.price,
-      billingPeriod: monthsToBillingPeriod(plan.duration_months),
-      features: plan.features ? Object.values(plan.features) : [],
-      activeSubscribers: 0, // This would need to be calculated on the backend
-      status: plan.is_active ? 'active' : 'archived',
-    }));
-  },
+export class PlanService {
+  // interval: string;
+  // discounts: any;
+  // id: string;
+  // currency: string | undefined;
+  // name: ReactNode;
+  // description: ReactNode;
+  // price: ReactNode;
+  // Get all plans for a business
+  static async getPlans(businessId: string): Promise<Plan[]> {
+    try {
+      const response = await api.get(`/subscriptions/plans/?business=${businessId}`);
+      return response.data.results;
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+      throw error;
+    }
+  }
 
-  // Get a single plan by ID
-  getPlan: async (merchantId: string, businessId: string, planId: string): Promise<SubscriptionPlan> => {
-    const response = await api.get(`/tenant/subscription-plans/${planId}/`);
-    const plan = response.data;
-    
-    return {
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: plan.price,
-      billingPeriod: monthsToBillingPeriod(plan.duration_months),
-      features: plan.features ? Object.values(plan.features) : [],
-      activeSubscribers: 0, // This would need to be calculated on the backend
-      status: plan.is_active ? 'active' : 'archived',
-    };
-  },
+  // Get a specific plan
+  static async getPlan(planId: number): Promise<Plan> {
+    try {
+      const response = await api.get(`/subscriptions/plans/${planId}/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching plan:', error);
+      throw error;
+    }
+  }
 
   // Create a new plan
-  createPlan: async (merchantId: string, businessId: string, data: PlanCreateData): Promise<SubscriptionPlan> => {
-    const response = await api.post('/tenant/subscription-plans/', {
-      tenant: merchantId,
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      duration_months: billingPeriodToMonths(data.billingPeriod),
-      features: data.features.reduce((obj, feature, index) => {
-        obj[`feature_${index + 1}`] = feature;
-        return obj;
-      }, {} as Record<string, string>),
-      is_active: data.status === 'active',
-    });
-    
-    const plan = response.data;
-    
-    return {
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: plan.price,
-      billingPeriod: monthsToBillingPeriod(plan.duration_months),
-      features: plan.features ? Object.values(plan.features) : [],
-      activeSubscribers: 0,
-      status: plan.is_active ? 'active' : 'archived',
-    };
-  },
-
-  // Update an existing plan
-  updatePlan: async (merchantId: string, businessId: string, planId: string, data: PlanUpdateData): Promise<SubscriptionPlan> => {
-    const updateData: any = {};
-    
-    if (data.name) updateData.name = data.name;
-    if (data.description) updateData.description = data.description;
-    if (data.price) updateData.price = data.price;
-    if (data.billingPeriod) updateData.duration_months = billingPeriodToMonths(data.billingPeriod);
-    if (data.features) {
-      updateData.features = data.features.reduce((obj, feature, index) => {
-        obj[`feature_${index + 1}`] = feature;
-        return obj;
-      }, {} as Record<string, string>);
+  static async createPlan(data: CreatePlanData): Promise<Plan> {
+    try {
+      const response = await api.post(`/subscriptions/plans/`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating plan:', error);
+      throw error;
     }
-    if (data.status !== undefined) updateData.is_active = data.status === 'active';
-    
-    const response = await api.patch(`/tenant/subscription-plans/${planId}/`, updateData);
-    const plan = response.data;
-    
-    return {
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: plan.price,
-      billingPeriod: monthsToBillingPeriod(plan.duration_months),
-      features: plan.features ? Object.values(plan.features) : [],
-      activeSubscribers: 0, // This would need to be calculated on the backend
-      status: plan.is_active ? 'active' : 'archived',
-    };
-  },
+  }
+
+  // Update a plan
+  static async updatePlan(planId: number, data: UpdatePlanData): Promise<Plan> {
+    try {
+      const response = await api.patch(`/subscriptions/plans/${planId}/`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      throw error;
+    }
+  }
 
   // Delete a plan
-  deletePlan: async (merchantId: string, businessId: string, planId: string): Promise<void> => {
-    await api.delete(`/tenant/subscription-plans/${planId}/`);
-  },
+  static async deletePlan(planId: number): Promise<void> {
+    try {
+      await api.delete(`/subscriptions/plans/${planId}/`);
+    } catch (error) {
+      console.error('Error deleting plan:', error);
+      throw error;
+    }
+  }
 
   // Get subscribers for a plan
-  getPlanSubscribers: async (merchantId: string, businessId: string, planId: string): Promise<any[]> => {
-    const response = await api.get(`/tenant/subscription-plans/${planId}/subscribers/`);
-    return response.data;
-  },
-};
+  static async getPlanSubscribers(planId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/subscriptions/plans/${planId}/subscribers/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching plan subscribers:', error);
+      throw error;
+    }
+  }
+
+  // Apply a discount to a plan
+  static async applyDiscount(planId: number, discountId: string): Promise<void> {
+    try {
+      await api.post(`/subscriptions/plans/${planId}/discounts/`, { discount: discountId });
+    } catch (error) {
+      console.error('Error applying discount:', error);
+      throw error;
+    }
+  }
+
+  // Remove a discount from a plan
+  static async removeDiscount(planId: number, discountId: string): Promise<void> {
+    try {
+      await api.delete(`/subscriptions/plans/${planId}/discounts/${discountId}/`);
+    } catch (error) {
+      console.error('Error removing discount:', error);
+      throw error;
+    }
+  }
+}
+
+export default PlanService;
+

@@ -17,27 +17,35 @@ const api = axios.create({
 // Extract tenant ID from URL path
 const extractTenantId = () => {
   const path = window.location.pathname;
-  const match = path.match(/\/merchant-portal\/(\d+|\w+)\/platform/);
+  const match = path.match(/\/merchant-portal\/(\d+|\w+)\/businesses\/(\d+|\w+)\//);
   return match ? match[1] : null;
 };
 
 // Request interceptor for auth token and tenant ID
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = AuthService.getAccessToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  async (config: InternalAxiosRequestConfig) => {
+    try {
+      const token = AuthService.getAccessToken();
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-    // Add tenant ID to requests that require it
-    const tenantId = extractTenantId();
-    if (tenantId && config.headers) {
-      config.headers['X-Tenant-ID'] = tenantId;
-    }
+      // Add tenant ID to requests that require it
+      const tenantId = extractTenantId();
+      if (tenantId && config.headers) {
+        config.headers['X-Tenant-ID'] = tenantId;
+      }
 
-    return config;
+      return config;
+    } catch (error) {
+      console.error('Request interceptor error:', error);
+      return Promise.reject(error);
+    }
   },
-  (error: AxiosError) => Promise.reject(error)
+  (error: AxiosError) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
 );
 
 // Response interceptor for token refresh
@@ -62,9 +70,9 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error('Token refresh error:', refreshError);
-        setTimeout(() => {
-          window.location.href = '/auth/signin';
-        }, 5000);
+        // Clear tokens and redirect
+        AuthService.clearTokens();
+        window.location.href = '/auth/signin';
         return Promise.reject(refreshError);
       }
     }

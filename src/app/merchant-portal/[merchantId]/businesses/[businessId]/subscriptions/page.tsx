@@ -1,213 +1,397 @@
-"use client";
+'use client';
 
-import { useState } from 'react';
-import { FiFilter, FiDownload, FiMoreVertical, FiCheck, FiX } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { useNotification } from '@/context/NotificationContext';
+import { Subscription, CreateSubscriptionData, UpdateSubscriptionData } from '@/services/subscriptionService';
+import { subscriptionService } from '@/services/subscriptionService';
+import { Customer } from '@/services/customerService';
+import { customerService } from '@/services/customerService';
+import { Plan, CreatePlanData, UpdatePlanData } from '@/services/planService';
+import { planService } from '@/services/planService';
+import { FiDollarSign, FiUsers, FiTrendingUp, FiTrendingDown, FiAlertCircle } from 'react-icons/fi';
+import { platformService } from '@/services/platformService';
+import type { PlatformReport } from '@/types/platform';
 
-interface Subscription {
-  id: string;
-  member: {
-    name: string;
-    email: string;
-  };
-  plan: {
-    name: string;
-    price: number;
-  };
-  status: 'active' | 'cancelled' | 'expired' | 'pending';
-  startDate: string;
-  endDate: string;
-  autoRenew: boolean;
-  lastPayment: string;
-  nextPayment: string;
+interface ReportMetric {
+  label: string;
+  value: string | number;
+  change: number;
+  trend: 'up' | 'down' | 'neutral';
+  icon: React.ElementType;
 }
 
-// Mock data - replace with API call
-const mockSubscriptions: Subscription[] = [
-  {
-    id: 'SUB-001',
-    member: {
-      name: 'John Doe',
-      email: 'john@example.com',
-    },
-    plan: {
-      name: 'Premium Plan',
-      price: 89.99,
-    },
-    status: 'active',
-    startDate: '2025-01-01',
-    endDate: '2025-12-31',
-    autoRenew: true,
-    lastPayment: '2025-03-01',
-    nextPayment: '2025-04-01',
-  },
-  {
-    id: 'SUB-002',
-    member: {
-      name: 'Sarah Smith',
-      email: 'sarah@example.com',
-    },
-    plan: {
-      name: 'Basic Plan',
-      price: 29.99,
-    },
-    status: 'cancelled',
-    startDate: '2025-01-01',
-    endDate: '2025-03-31',
-    autoRenew: false,
-    lastPayment: '2025-03-01',
-    nextPayment: '2025-04-01',
-  },
-];
+export default function SubscriptionsPage() {
+  const params = useParams();
+  const businessId = params?.businessId && Array.isArray(params.businessId) ? params.businessId[0] : params.businessId;
+  const merchantId = params?.merchantId && Array.isArray(params.merchantId) ? params.merchantId[0] : params.merchantId;
 
-export default function SubscriptionsPage({ params }: { params: { businessId: string } }) {
+  if (!businessId || !merchantId) {
+    return <div className="text-red-500">Business ID or Merchant ID not found</div>;
+  }
+
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'cancelled' | 'expired'>('all');
+  const [showAddSubscription, setShowAddSubscription] = useState(false);
+  const [formData, setFormData] = useState<CreateSubscriptionData>({
+    customer: 0,
+    plan: 0,
+  });
+  const [metrics, setMetrics] = useState<ReportMetric[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const { addNotification } = useNotification();
 
-  const filteredSubscriptions = mockSubscriptions.filter(
-    (subscription) =>
-      (statusFilter === 'all' || subscription.status === statusFilter) &&
-      (subscription.member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        subscription.member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        subscription.plan.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const loadSubscriptions = async () => {
+    try {
+      const response = await subscriptionService.getSubscriptions(String(businessId));
+      setSubscriptions(response);
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+      setError('Failed to load subscriptions. Please try again.');
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load subscriptions. Please try again.'
+      });
+    }
+  };
+
+  const loadCustomers = async () => {
+    try {
+      const response = await customerService.getCustomers(String(businessId));
+      setCustomers(response);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      setError('Failed to load customers. Please try again.');
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load customers. Please try again.'
+      });
+    }
+  };
+
+  const loadPlans = async () => {
+    try {
+      const response = await planService.getPlans(String(businessId));
+      setPlans(response);
+    } catch (error) {
+      console.error('Error loading plans:', error);
+      setError('Failed to load plans. Please try again.');
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load plans. Please try again.'
+      });
+    }
+  };
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoading(true);
+        setMetricsError(null);
+
+        // Fetch metrics from platform service
+        const report: PlatformReport = await platformService.getReport(String(businessId));
+
+        setMetrics([
+          {
+            label: 'Total Revenue',
+            value: `$${report.totalRevenue.toFixed(2)}`,
+            change: report.revenueChange,
+            trend: report.revenueChange >= 0 ? 'up' : 'down',
+            icon: FiDollarSign
+          },
+          {
+            label: 'Active Members',
+            value: report.activeMembers,
+            change: report.memberChange,
+            trend: report.memberChange >= 0 ? 'up' : 'down',
+            icon: FiUsers
+          },
+          {
+            label: 'New Subscriptions',
+            value: report.newSubscriptions,
+            change: report.subscriptionChange,
+            trend: report.subscriptionChange >= 0 ? 'up' : 'down',
+            icon: FiTrendingUp
+          },
+          {
+            label: 'Churn Rate',
+            value: `${Math.abs(report.churnChange).toFixed(1)}%`,
+            change: report.churnChange,
+            trend: 'down',
+            icon: FiTrendingDown
+          },
+          {
+            label: 'ARPU',
+            value: `$${report.arpu.toFixed(2)}`,
+            change: report.arpuChange,
+            trend: report.arpuChange >= 0 ? 'up' : 'down',
+            icon: FiDollarSign
+          },
+          {
+            label: 'Pending Payments',
+            value: `$${report.pendingPayments.toFixed(2)}`,
+            change: report.paymentIssues,
+            trend: 'neutral',
+            icon: FiAlertCircle
+          }
+        ]);
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+        setMetricsError('Failed to load metrics. Please try again.');
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load metrics. Please try again.'
+        });
+        setLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, [businessId]);
+
+  useEffect(() => {
+    if (businessId) {
+      loadSubscriptions();
+      loadCustomers();
+      loadPlans();
+    }
+  }, [businessId]);
+
+  const filteredSubscriptions = subscriptions.filter(sub => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const customerName = `${sub.customer.first_name} ${sub.customer.last_name}`;
+      const planName = sub.plan.name;
+      if (!customerName.toLowerCase().includes(query) && 
+          !planName.toLowerCase().includes(query) && 
+          !sub.status.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    if (statusFilter !== 'all' && sub.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const handleAddSubscription = async (data: CreateSubscriptionData) => {
+    try {
+      const response = await subscriptionService.createSubscription(data);
+      setSubscriptions([...subscriptions, response]);
+      setShowAddSubscription(false);
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Subscription added successfully'
+      });
+    } catch (error) {
+      console.error('Error adding subscription:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to add subscription. Please try again.'
+      });
+    }
+  };
+
+  const handleUpdateSubscription = async (id: number, data: UpdateSubscriptionData) => {
+    try {
+      const response = await subscriptionService.updateSubscription(id, data);
+      setSubscriptions(subscriptions.map(sub => 
+        sub.id === id ? { ...sub, ...response } : sub
+      ));
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Subscription updated successfully'
+      });
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update subscription. Please try again.'
+      });
+    }
+  };
+
+  const handleDeleteSubscription = async (id: number) => {
+    try {
+      await subscriptionService.deleteSubscription(id);
+      setSubscriptions(subscriptions.filter(sub => sub.id !== id));
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Subscription deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting subscription:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete subscription. Please try again.'
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Subscriptions</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Manage active subscriptions and renewals
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-            <FiFilter className="h-4 w-4" />
-            Filter
-          </button>
-          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600">
-            <FiDownload className="h-4 w-4" />
-            Export
-          </button>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Subscriptions</h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          Manage and monitor your business subscriptions
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {metrics.map((metric, index) => (
+          <div
+            key={index}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+          >
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                <metric.icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  {metric.label}
+                </h3>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {metric.value}
+                </p>
+                <div className="flex items-center mt-2">
+                  <metric.icon
+                    className={`h-5 w-5 ${metric.trend === 'up' ? 'text-green-500' : metric.trend === 'down' ? 'text-red-500' : 'text-gray-500'}`}
+                  />
+                  <p className={`ml-2 text-sm font-medium ${metric.trend === 'up' ? 'text-green-500' : metric.trend === 'down' ? 'text-red-500' : 'text-gray-500'}`}>
+                    {metric.change >= 0 ? '+' : ''}{metric.change}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <input
             type="text"
-            placeholder="Search by member name, email, or plan..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+            placeholder="Search by customer, plan, or status..."
+            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-brand-500 dark:focus:ring-offset-gray-800"
           />
-        </div>
-        <div className="flex items-center">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-brand-500 dark:focus:ring-offset-gray-800"
           >
-            <option value="all">All Status</option>
+            <option value="all">All Statuses</option>
             <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
             <option value="cancelled">Cancelled</option>
             <option value="expired">Expired</option>
-            <option value="pending">Pending</option>
           </select>
+          <button
+            onClick={() => setShowAddSubscription(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-transparent bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+          >
+            Add Subscription
+          </button>
         </div>
       </div>
 
-      {/* Subscriptions Table */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      {/* Subscriptions List */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-gray-200 dark:border-gray-700">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                  Member
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  Customer
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                   Plan
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                   Status
                 </th>
-                <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                  Auto-Renew
-                </th>
-                <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                   Start Date
                 </th>
-                <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                  End Date
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  Next Billing
                 </th>
-                <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                  Next Payment
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  Amount
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredSubscriptions.map((subscription) => (
-                <tr key={subscription.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 sm:px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {subscription.member.name}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {subscription.member.email}
-                      </div>
+            <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+              {filteredSubscriptions.map((sub) => (
+                <tr key={sub.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {sub.customer.first_name} {sub.customer.last_name}
                     </div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {subscription.plan.name}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        ${subscription.plan.price}/mo
-                      </div>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {sub.plan.name}
                     </div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        subscription.status === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : subscription.status === 'cancelled'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          : subscription.status === 'expired'
-                          ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      }`}
-                    >
-                      {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      sub.status === 'active' ? 'bg-green-100 text-green-800' :
+                      sub.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                      sub.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
                     </span>
                   </td>
-                  <td className="hidden sm:table-cell px-4 sm:px-6 py-4">
-                    {subscription.autoRenew ? (
-                      <FiCheck className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <FiX className="h-5 w-5 text-red-500" />
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(sub.start_date).toLocaleDateString()}
+                    </div>
                   </td>
-                  <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(subscription.startDate).toLocaleDateString()}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString() : 'N/A'}
+                    </div>
                   </td>
-                  <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(subscription.endDate).toLocaleDateString()}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      ${Number(sub.plan.price).toFixed(2)}
+                    </div>
                   </td>
-                  <td className="hidden sm:table-cell px-4 sm:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(subscription.nextPayment).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <button className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700">
-                      <FiMoreVertical className="h-5 w-5" />
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleDeleteSubscription(sub.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -215,13 +399,74 @@ export default function SubscriptionsPage({ params }: { params: { businessId: st
             </tbody>
           </table>
         </div>
-
-        {filteredSubscriptions.length === 0 && (
-          <div className="px-6 py-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">No subscriptions found</p>
-          </div>
-        )}
       </div>
+
+      {/* Add Subscription Modal */}
+      {showAddSubscription && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Add Subscription
+            </h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleAddSubscription(formData);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Customer
+                  </label>
+                  <select
+                    value={formData.customer}
+                    onChange={(e) => setFormData({ ...formData, customer: parseInt(e.target.value) })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                  >
+                    <option value="">Select customer</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.first_name} {customer.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Plan
+                  </label>
+                  <select
+                    value={formData.plan}
+                    onChange={(e) => setFormData({ ...formData, plan: parseInt(e.target.value) })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                  >
+                    <option value="">Select plan</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSubscription(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-brand-500 dark:focus:ring-offset-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-brand-500 border border-transparent rounded-md hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
