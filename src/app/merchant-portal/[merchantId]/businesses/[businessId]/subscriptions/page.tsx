@@ -8,7 +8,7 @@ import { subscriptionService } from '@/services/subscriptionService';
 import { Customer } from '@/services/customerService';
 import { customerService } from '@/services/customerService';
 import { Plan, CreatePlanData, UpdatePlanData } from '@/services/planService';
-import { planService } from '@/services/planService';
+import { PlanService } from '@/services/planService';
 import { FiDollarSign, FiUsers, FiTrendingUp, FiTrendingDown, FiAlertCircle } from 'react-icons/fi';
 import { platformService } from '@/services/platformService';
 import type { PlatformReport } from '@/types/platform';
@@ -23,8 +23,8 @@ interface ReportMetric {
 
 export default function SubscriptionsPage() {
   const params = useParams();
-  const businessId = params?.businessId && Array.isArray(params.businessId) ? params.businessId[0] : params.businessId;
-  const merchantId = params?.merchantId && Array.isArray(params.merchantId) ? params.merchantId[0] : params.merchantId;
+  const businessId = params?.businessId && Array.isArray(params.businessId) ? params.businessId[0] : params?.businessId;
+  const merchantId = params?.merchantId && Array.isArray(params.merchantId) ? params.merchantId[0] : params?.merchantId;
 
   if (!businessId || !merchantId) {
     return <div className="text-red-500">Business ID or Merchant ID not found</div>;
@@ -79,7 +79,7 @@ export default function SubscriptionsPage() {
 
   const loadPlans = async () => {
     try {
-      const response = await planService.getPlans(String(businessId));
+      const response = await PlanService.getPlans(String(businessId));
       setPlans(response);
     } catch (error) {
       console.error('Error loading plans:', error);

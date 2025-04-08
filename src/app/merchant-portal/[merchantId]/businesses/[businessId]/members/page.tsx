@@ -5,30 +5,44 @@ import { useParams } from 'next/navigation';
 import { useNotification } from '@/context/NotificationContext';
 import { Customer, CreateCustomerData } from '@/services/customerService';
 import { customerService } from '@/services/customerService';
+import Link from 'next/link';
 
 interface AddMemberFormData extends CreateCustomerData {
   is_active?: boolean;
 }
 
-export default function MembersPage({ params }: { params: { businessId: string } }) {
-  const { businessId } = params;
+export default function MembersPage() {
+  const params = useParams();
+  const businessId = params?.businessId as string;
   const [members, setMembers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState<AddMemberFormData>({
-    business: Number(businessId),
+    business: businessId ? Number(businessId) : 0,
     first_name: "",
     last_name: "",
     email: "",
     phone: "",
     is_active: true
   });
+  const [isLoading, setIsLoading] = useState(true);
   const { addNotification } = useNotification();
 
   const loadMembers = async () => {
+    if (!businessId) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Business ID is missing.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await customerService.getCustomers(Number(businessId));
+      const response = await customerService.getCustomers(businessId);
       setMembers(response);
+      setIsLoading(false);
     } catch (error) {
       console.error("Failed to load members:", error);
       addNotification({
@@ -36,12 +50,9 @@ export default function MembersPage({ params }: { params: { businessId: string }
         title: 'Error',
         message: 'Failed to load members. Please try again.',
       });
+      setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadMembers();
-  }, [businessId]);
 
   const handleAddMember = async (data: AddMemberFormData) => {
     try {
@@ -51,7 +62,7 @@ export default function MembersPage({ params }: { params: { businessId: string }
       addNotification({
         type: 'success',
         title: 'Member Added',
-        message: 'New member has been successfully added.',
+        message: 'New member has been successfully added. A sync request has been created.',
       });
     } catch (error) {
       console.error('Failed to add member:', error);
@@ -107,97 +118,119 @@ export default function MembersPage({ params }: { params: { businessId: string }
     }
   };
 
+  useEffect(() => {
+    if (businessId) {
+      loadMembers();
+    }
+  }, [businessId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Members</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Manage your business members and their subscriptions
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search members..."
-            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700/70"
-          />
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Team Members</h1>
+        <div className="flex space-x-4">
+          <Link
+            href={`/merchant-portal/${params?.merchantId}/businesses/${businessId}/membership-requests`}
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+          >
+            View Membership Requests
+          </Link>
           <button
             onClick={() => setShowAddMember(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-transparent bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           >
-            Add Member
+            Add New Member
           </button>
         </div>
       </div>
 
       {/* Members List */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="px-4 py-5 sm:px-6">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Members</h2>
+        </div>
+        <div className="border-t border-gray-200 dark:border-gray-700">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Phone
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {members.map((member) => (
-                <tr key={member.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {member.first_name} {member.last_name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {member.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {member.phone}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {member.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleUpdateMember(member.id, { is_active: !member.is_active })}
-                      className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                    >
-                      Toggle Status
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMember(member.id)}
-                      className="ml-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      Delete
-                    </button>
+              {members?.length > 0 ? (
+                members.filter(member => 
+                  member.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  member.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  member.phone.includes(searchTerm)
+                ).map((member) => (
+                  <tr key={member.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {member.first_name} {member.last_name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-white">{member.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-white">{member.phone}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        member.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                      }`}>
+                        {member.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleUpdateMember(member.id, {
+                          is_active: !member.is_active
+                        })}
+                        className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300"
+                      >
+                        {member.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="ml-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No members found
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -205,8 +238,8 @@ export default function MembersPage({ params }: { params: { businessId: string }
 
       {/* Add Member Modal */}
       {showAddMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative">
             <h2 className="text-xl font-semibold mb-4">Add New Member</h2>
             <form onSubmit={(e) => {
               e.preventDefault();
