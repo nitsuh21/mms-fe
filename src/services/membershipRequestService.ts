@@ -2,9 +2,11 @@ import { MembershipRequest, MembershipRequestFilter, MembershipRequestStatus } f
 import { api } from '../utils/api';
 
 export class MembershipRequestService {
-  async getRequests(filter: MembershipRequestFilter = {}): Promise<MembershipRequest[]> {
+  private static readonly BASE_URL = '/api/subscriptions';
+
+  async getRequests(businessId: number, filter: MembershipRequestFilter = {}): Promise<MembershipRequest[]> {
     try {
-      const response = await api.get('/api/subscriptions/businesses/1/membership-requests-made/');
+      const response = await api.get(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-made/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching membership requests:', error);
@@ -14,7 +16,7 @@ export class MembershipRequestService {
 
   async createRequest(businessId: number, role: string, message: string): Promise<MembershipRequest> {
     try {
-      const response = await api.post('/api/subscriptions/businesses/1/membership-requests-made/', {
+      const response = await api.post(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-made/`, {
         business_id: businessId,
         role,
         message
@@ -26,9 +28,9 @@ export class MembershipRequestService {
     }
   }
 
-  async updateRequest(requestId: number, status: MembershipRequestStatus): Promise<MembershipRequest> {
+  async updateRequest(businessId: number, requestId: number, status: MembershipRequestStatus): Promise<MembershipRequest> {
     try {
-      const response = await api.patch(`/api/subscriptions/businesses/1/membership-requests-made/${requestId}/`, {
+      const response = await api.patch(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-made/${requestId}/`, {
         status
       });
       return response.data;
@@ -38,18 +40,18 @@ export class MembershipRequestService {
     }
   }
 
-  async deleteRequest(requestId: number): Promise<void> {
+  async deleteRequest(businessId: number, requestId: number): Promise<void> {
     try {
-      await api.delete(`/api/subscriptions/businesses/1/membership-requests-made/${requestId}/`);
+      await api.delete(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-made/${requestId}/`);
     } catch (error) {
       console.error('Error deleting request:', error);
       throw error;
     }
   }
 
-  async getMyRequests(): Promise<MembershipRequest[]> {
+  async getMyRequests(businessId: number): Promise<MembershipRequest[]> {
     try {
-      const response = await api.get('/api/subscriptions/businesses/1/membership-requests-made/');
+      const response = await api.get(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-made/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching my requests:', error);
@@ -59,7 +61,7 @@ export class MembershipRequestService {
 
   async getReceivedRequests(businessId: number): Promise<MembershipRequest[]> {
     try {
-      const response = await api.get(`/api/subscriptions/businesses/${businessId}/membership-requests-received/`);
+      const response = await api.get(`${MembershipRequestService.BASE_URL}/businesses/${businessId}/membership-requests-received/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching received requests:', error);

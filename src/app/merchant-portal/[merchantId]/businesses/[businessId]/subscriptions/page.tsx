@@ -7,11 +7,9 @@ import { Subscription, CreateSubscriptionData, UpdateSubscriptionData } from '@/
 import { subscriptionService } from '@/services/subscriptionService';
 import { Customer } from '@/services/customerService';
 import { customerService } from '@/services/customerService';
-import { Plan, CreatePlanData, UpdatePlanData } from '@/services/planService';
+import { Plan } from '@/services/planService';
 import { PlanService } from '@/services/planService';
-import { FiDollarSign, FiUsers, FiTrendingUp, FiTrendingDown, FiAlertCircle } from 'react-icons/fi';
-import { platformService } from '@/services/platformService';
-import type { PlatformReport } from '@/types/platform';
+import { FiCalendar } from 'react-icons/fi';
 
 interface ReportMetric {
   label: string;
@@ -36,14 +34,16 @@ export default function SubscriptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'cancelled' | 'expired'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'AC' | 'PD' | 'CN' | 'TR' | 'EX'>('all');
   const [showAddSubscription, setShowAddSubscription] = useState(false);
   const [formData, setFormData] = useState<CreateSubscriptionData>({
-    customer: 0,
-    plan: 0,
+    business: Number(businessId),
+    plan_id: 0,
+    customer_id: 0,
+    start_date: new Date().toISOString().split('T')[0]
   });
   const [metrics, setMetrics] = useState<ReportMetric[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const { addNotification } = useNotification();
 
@@ -93,76 +93,6 @@ export default function SubscriptionsPage() {
   };
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        setLoading(true);
-        setMetricsError(null);
-
-        // Fetch metrics from platform service
-        const report: PlatformReport = await platformService.getReport(String(businessId));
-
-        setMetrics([
-          {
-            label: 'Total Revenue',
-            value: `$${report.totalRevenue.toFixed(2)}`,
-            change: report.revenueChange,
-            trend: report.revenueChange >= 0 ? 'up' : 'down',
-            icon: FiDollarSign
-          },
-          {
-            label: 'Active Members',
-            value: report.activeMembers,
-            change: report.memberChange,
-            trend: report.memberChange >= 0 ? 'up' : 'down',
-            icon: FiUsers
-          },
-          {
-            label: 'New Subscriptions',
-            value: report.newSubscriptions,
-            change: report.subscriptionChange,
-            trend: report.subscriptionChange >= 0 ? 'up' : 'down',
-            icon: FiTrendingUp
-          },
-          {
-            label: 'Churn Rate',
-            value: `${Math.abs(report.churnChange).toFixed(1)}%`,
-            change: report.churnChange,
-            trend: 'down',
-            icon: FiTrendingDown
-          },
-          {
-            label: 'ARPU',
-            value: `$${report.arpu.toFixed(2)}`,
-            change: report.arpuChange,
-            trend: report.arpuChange >= 0 ? 'up' : 'down',
-            icon: FiDollarSign
-          },
-          {
-            label: 'Pending Payments',
-            value: `$${report.pendingPayments.toFixed(2)}`,
-            change: report.paymentIssues,
-            trend: 'neutral',
-            icon: FiAlertCircle
-          }
-        ]);
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching metrics:', error);
-        setMetricsError('Failed to load metrics. Please try again.');
-        addNotification({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to load metrics. Please try again.'
-        });
-        setLoading(false);
-      }
-    };
-
-    fetchMetrics();
-  }, [businessId]);
-
-  useEffect(() => {
     if (businessId) {
       loadSubscriptions();
       loadCustomers();
@@ -177,7 +107,7 @@ export default function SubscriptionsPage() {
       const planName = sub.plan.name;
       if (!customerName.toLowerCase().includes(query) && 
           !planName.toLowerCase().includes(query) && 
-          !sub.status.toLowerCase().includes(query)) {
+          !getStatusLabel(sub.status).toLowerCase().includes(query)) {
         return false;
       }
     }
@@ -187,23 +117,100 @@ export default function SubscriptionsPage() {
     return true;
   });
 
-  const handleAddSubscription = async (data: CreateSubscriptionData) => {
+  const calculateDates = (plan: Plan, startDate: string) => {
+    const start = new Date(startDate);
+    const interval = plan.interval;
+    
+    // Calculate end date based on interval
+    let end = new Date(start);
+    switch(interval) {
+      case 'D':
+        end.setDate(end.getDate() + 1);
+        break;
+      case 'W':
+        end.setDate(end.getDate() + 7);
+        break;
+      case 'M':
+        end.setMonth(end.getMonth() + 1);
+        break;
+      case 'Y':
+        end.setFullYear(end.getFullYear() + 1);
+        break;
+    }
+
+    // Calculate next billing date (same as end date for simplicity)
+    const nextBilling = new Date(end);
+
+    return {
+      end_date: end.toISOString().split('T')[0],
+      next_billing_date: nextBilling.toISOString().split('T')[0]
+    };
+  };
+
+  const handlePlanChange = (planId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      plan_id: planId
+    }));
+  };
+
+  const handleCustomerChange = (customerId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: customerId
+    }));
+  };
+
+  const resetFormData = () => {
+    setFormData({
+      business: Number(businessId),
+      plan_id: 0,
+      customer_id: 0,
+      start_date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleCreateSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.plan_id || !formData.customer_id) {
+      addNotification({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please select both a customer and a plan'
+      });
+      return;
+    }
+
     try {
-      const response = await subscriptionService.createSubscription(data);
-      setSubscriptions([...subscriptions, response]);
-      setShowAddSubscription(false);
+      setLoading(true);
+      
+      const response = await subscriptionService.createSubscription({
+        business: Number(businessId),
+        plan_id: formData.plan_id,
+        customer_id: formData.customer_id,
+        start_date: formData.start_date
+      });
+      
+      await loadSubscriptions();
+      
       addNotification({
         type: 'success',
         title: 'Success',
-        message: 'Subscription added successfully'
+        message: 'Subscription created successfully'
       });
-    } catch (error) {
-      console.error('Error adding subscription:', error);
+      
+      setShowAddSubscription(false);
+      resetFormData();
+    } catch (error: any) {
+      console.error('Error creating subscription:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to add subscription. Please try again.'
+        message: error.message || 'Failed to create subscription. Please try again.'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -245,6 +252,17 @@ export default function SubscriptionsPage() {
         message: 'Failed to delete subscription. Please try again.'
       });
     }
+  };
+
+  const getStatusLabel = (status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX') => {
+    const statusLabels = {
+      'AC': 'Active',
+      'PD': 'Past Due',
+      'CN': 'Cancelled',
+      'TR': 'Trial',
+      'EX': 'Expired'
+    };
+    return statusLabels[status];
   };
 
   return (
@@ -302,13 +320,14 @@ export default function SubscriptionsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-brand-500 dark:focus:ring-offset-gray-800"
+            className="border rounded-lg px-4 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
           >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="expired">Expired</option>
+            <option value="all" className="text-gray-700 dark:text-gray-300">All Status</option>
+            <option value="AC" className="text-gray-700 dark:text-gray-300">Active</option>
+            <option value="PD" className="text-gray-700 dark:text-gray-300">Past Due</option>
+            <option value="CN" className="text-gray-700 dark:text-gray-300">Cancelled</option>
+            <option value="TR" className="text-gray-700 dark:text-gray-300">Trial</option>
+            <option value="EX" className="text-gray-700 dark:text-gray-300">Expired</option>
           </select>
           <button
             onClick={() => setShowAddSubscription(true)}
@@ -363,12 +382,13 @@ export default function SubscriptionsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      sub.status === 'active' ? 'bg-green-100 text-green-800' :
-                      sub.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                      sub.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
+                      sub.status === 'AC' ? 'bg-green-100 text-green-800' :
+                      sub.status === 'PD' ? 'bg-yellow-100 text-yellow-800' :
+                      sub.status === 'CN' ? 'bg-red-100 text-red-800' :
+                      sub.status === 'TR' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
-                      {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
+                      {getStatusLabel(sub.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -408,19 +428,19 @@ export default function SubscriptionsPage() {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Add Subscription
             </h2>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              handleAddSubscription(formData);
-            }}>
+            <form onSubmit={handleCreateSubscription}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Customer
+                    Customer <span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={formData.customer}
-                    onChange={(e) => setFormData({ ...formData, customer: parseInt(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                    value={formData.customer_id || ''}
+                    onChange={(e) => handleCustomerChange(parseInt(e.target.value))}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 ${
+                      !formData.customer_id ? 'border-red-300' : ''
+                    }`}
+                    required
                   >
                     <option value="">Select customer</option>
                     {customers.map((customer) => (
@@ -432,12 +452,15 @@ export default function SubscriptionsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Plan
+                    Plan <span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={formData.plan}
-                    onChange={(e) => setFormData({ ...formData, plan: parseInt(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                    value={formData.plan_id || ''}
+                    onChange={(e) => handlePlanChange(parseInt(e.target.value))}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 ${
+                      !formData.plan_id ? 'border-red-300' : ''
+                    }`}
+                    required
                   >
                     <option value="">Select plan</option>
                     {plans.map((plan) => (
@@ -447,21 +470,43 @@ export default function SubscriptionsPage() {
                     ))}
                   </select>
                 </div>
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddSubscription(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-brand-500 dark:focus:ring-offset-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-brand-500 border border-transparent rounded-md hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                  >
-                    Add
-                  </button>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Start Date
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FiCalendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </div>
+                    <input
+                      type="date"
+                      value={formData.start_date || new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                      min={new Date().toISOString().split('T')[0]}
+                      max={new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]} // 1 year from now
+                    />
+                  </div>
                 </div>
+              </div>
+              <div className="mt-4 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddSubscription(false);
+                    resetFormData();
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-md hover:bg-brand-600 disabled:opacity-50"
+                  disabled={!formData.customer_id || !formData.plan_id || loading}
+                >
+                  {loading ? 'Creating...' : 'Create'}
+                </button>
               </div>
             </form>
           </div>

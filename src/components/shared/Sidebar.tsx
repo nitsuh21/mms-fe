@@ -18,7 +18,9 @@ import {
   FiTag,
   FiChevronLeft,
   FiChevronRight,
-  FiX
+  FiX,
+  FiFileText,
+  FiPackage,
 } from "react-icons/fi";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/context/SidebarContext";
@@ -71,13 +73,18 @@ const businessNavItems: NavItem[] = [
   {
     title: "Subscriptions",
     href: "subscriptions",
-    icon: FiCreditCard,
+    icon: FiPackage,
   },
   {
-    title: "Reports",
-    href: "reports",
-    icon: FiBarChart2,
+    title: "Invoices",
+    href: "invoices",
+    icon: FiFileText,
   },
+  // {
+  //   title: "Reports",
+  //   href: "reports",
+  //   icon: FiBarChart2,
+  // },
   {
     title: "Settings",
     href: "settings",

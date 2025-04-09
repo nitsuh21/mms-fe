@@ -12,45 +12,42 @@ export interface Subscription {
     currency: string;
     interval: 'D' | 'W' | 'M' | 'Y';
     trial_days: number;
-    features: Record<string, string>;
+    features: Record<string, any>;
     is_active: boolean;
     created_at: string;
     updated_at: string;
-    discounts: any[];
   };
   customer: {
     id: number;
     user: number | null;
     first_name: string;
     last_name: string;
-    business: number;
     email: string;
     phone: string;
     is_active: boolean;
     created_at: string;
     updated_at: string;
   };
-  status: string;
+  status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
   start_date: string;
   end_date: string;
   trial_end: string | null;
   next_billing_date: string;
-  applied_discounts: any[];
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateSubscriptionData {
-  customer: number;
-  plan: number;
-  start_date?: string;
-  end_date?: string;
-  trial_end?: string;
+  business: number;
+  plan_id: number;
+  customer_id: number;
+  start_date: string;
 }
 
 export interface UpdateSubscriptionData {
-  status?: string;
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
   end_date?: string;
+  trial_end?: string;
 }
 
 export class SubscriptionService {
@@ -81,9 +78,9 @@ export class SubscriptionService {
     try {
       const response = await api.post(`/subscriptions/subscriptions/`, data);
       return response.data;
-    } catch (error) {
-      console.error('Error creating subscription:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Error creating subscription:', error.response?.data || error);
+      throw error.response?.data || error;
     }
   }
 

@@ -34,6 +34,7 @@ const MembershipRequestsPage = ({ merchantId, businessId }: { merchantId: string
     try {
       setLoading(true);
       const response = await membershipRequestService.getReceivedRequests(parseInt(businessId));
+      console.log("membership requests:", response);
       setRequests(response);
     } catch (error) {
       console.error('Error fetching membership requests:', error);
