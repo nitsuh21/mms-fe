@@ -13,52 +13,65 @@ interface Notification {
   duration?: number;
 }
 
-type NotificationAction =
-  | { type: 'ADD_NOTIFICATION'; payload: Omit<Notification, 'id'> }
-  | { type: 'REMOVE_NOTIFICATION'; payload: string };
+interface NotificationState {
+  type: NotificationType;
+  title: string;
+  message: string;
+  duration?: number;
+}
+
+interface RemoveNotificationPayload {
+  id: string;
+}
+
+interface NotificationAction {
+  type: 'ADD_NOTIFICATION' | 'REMOVE_NOTIFICATION';
+  payload: NotificationState | RemoveNotificationPayload;
+}
 
 interface NotificationContextType {
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
+  addNotification: (notification: NotificationState) => void;
   removeNotification: (id: string) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | null>(null);
 
-function notificationReducer(state: Notification[], action: NotificationAction): Notification[] {
+const notificationReducer = (state: Notification[], action: NotificationAction): Notification[] => {
   switch (action.type) {
-    case 'ADD_NOTIFICATION':
-      return [...state, { ...action.payload, id: Date.now().toString() }];
-    case 'REMOVE_NOTIFICATION':
-      return state.filter((notification) => notification.id !== action.payload);
+    case 'ADD_NOTIFICATION': {
+      const payload = action.payload as NotificationState;
+      const notification = {
+        id: crypto.randomUUID(),
+        type: payload.type,
+        title: payload.title,
+        message: payload.message,
+        duration: payload.duration,
+      };
+      return [...state, notification];
+    }
+    case 'REMOVE_NOTIFICATION': {
+      const payload = action.payload as RemoveNotificationPayload;
+      return state.filter((n) => n.id !== payload.id);
+    }
     default:
       return state;
   }
-}
+};
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, dispatch] = useReducer(notificationReducer, []);
 
-  const removeNotification = useCallback((id: string) => {
-    dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
+  const addNotification = useCallback((notification: NotificationState) => {
+    dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
   }, []);
 
-  const addNotification = useCallback(
-    (notification: Omit<Notification, 'id'>) => {
-      dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
-      if (notification.duration !== 0) {
-        setTimeout(() => {
-          removeNotification(Date.now().toString());
-        }, notification.duration || 5000);
-      }
-    },
-    [removeNotification]
-  );
+  const removeNotification = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_NOTIFICATION', payload: { id } });
+  }, []);
 
   return (
-    <NotificationContext.Provider
-      value={{ notifications, addNotification, removeNotification }}
-    >
+    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
       {children}
       <NotificationContainer />
     </NotificationContext.Provider>
@@ -67,64 +80,62 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 export function useNotification() {
   const context = useContext(NotificationContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;
 }
 
-function NotificationContainer() {
+export function NotificationContainer() {
   const { notifications, removeNotification } = useNotification();
 
   const getIcon = (type: NotificationType) => {
     switch (type) {
       case 'success':
-        return <FiCheckCircle className="h-5 w-5 text-green-400" />;
+        return <FiCheckCircle className="w-4 h-4 text-green-500" />;
       case 'error':
-        return <FiXCircle className="h-5 w-5 text-red-400" />;
-      case 'warning':
-        return <FiAlertCircle className="h-5 w-5 text-yellow-400" />;
+        return <FiAlertCircle className="w-4 h-4 text-red-500" />;
       case 'info':
-        return <FiInfo className="h-5 w-5 text-blue-400" />;
-    }
-  };
-
-  const getStyles = (type: NotificationType) => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
-      case 'error':
-        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+        return <FiInfo className="w-4 h-4 text-blue-500" />;
       case 'warning':
-        return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
-      case 'info':
-        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+        return <FiXCircle className="w-4 h-4 text-yellow-500" />;
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed top-4 right-4 z-[9999] w-full max-w-sm px-4 py-2" style={{
+      animation: 'slideIn 0.3s ease-out',
+      animationFillMode: 'forwards',
+    }}>
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`flex w-96 items-start gap-3 rounded-lg border p-4 shadow-lg ${getStyles(
-            notification.type
-          )}`}
+          className={`flex items-center rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 transition-all duration-300 ${
+            notification.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20'
+              : notification.type === 'error'
+              ? 'bg-red-50 dark:bg-red-900/20'
+              : notification.type === 'warning'
+              ? 'bg-yellow-50 dark:bg-yellow-900/20'
+              : 'bg-blue-50 dark:bg-blue-900/20'
+          }`}
+          style={{
+            animation: 'slideIn 0.3s ease-out',
+            animationFillMode: 'forwards',
+          }}
         >
           {getIcon(notification.type)}
-          <div className="flex-1">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100">
-              {notification.title}
-            </h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              {notification.message}
-            </p>
+          <div className="flex-1 ml-3">
+            <h3 className="font-medium text-gray-900 dark:text-white">{notification.title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{notification.message}</p>
           </div>
           <button
             onClick={() => removeNotification(notification.id)}
-            className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
+            className="p-1 text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
           >
-            <FiX className="h-5 w-5" />
+            <FiX className="w-4 h-4" />
           </button>
         </div>
       ))}
