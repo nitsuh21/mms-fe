@@ -1,23 +1,16 @@
-export type MembershipRequestStatus = 'pending' | 'approved' | 'rejected';
+export type MembershipRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type MembershipRequestType = 'MEMBER';
 
-export type MembershipRequest = {
+export interface MembershipRequest {
   id: number;
-  requestor: {
-    id: number;
-    email: string;
-    first_name: string;
-    last_name: string;
-  };
-  business: {
-    id: number;
-    name: string;
-  };
+  business: number;
+  user: number | null;
   status: MembershipRequestStatus;
-  role: 'owner' | 'manager' | 'staff';
-  message: string;
+  type: MembershipRequestType;
   created_at: string;
   updated_at: string;
-};
+  customer: number;
+}
 
 export type MembershipRequestFilter = {
   status?: MembershipRequestStatus;

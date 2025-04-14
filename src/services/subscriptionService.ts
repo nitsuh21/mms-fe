@@ -12,6 +12,7 @@ export interface Subscription {
     currency: string;
     interval: 'D' | 'W' | 'M' | 'Y';
     trial_days: number;
+    has_trial: boolean;
     features: Record<string, any>;
     is_active: boolean;
     created_at: string;
@@ -42,12 +43,23 @@ export interface CreateSubscriptionData {
   plan_id: number;
   customer_id: number;
   start_date: string;
+  end_date?: string;
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  trial_end?: string;
 }
 
 export interface UpdateSubscriptionData {
   status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  start_date?: string;
   end_date?: string;
   trial_end?: string;
+}
+
+export interface Payment {
+  id: number;
+  created_at: string;
+  amount: string;
+  status: 'C' | 'P' | 'F'; // Completed, Pending, Failed
 }
 
 export class SubscriptionService {
@@ -73,6 +85,17 @@ export class SubscriptionService {
     }
   }
 
+  // Check if a customer has an active subscription
+  async hasActiveSubscription(businessId: string, customerId: number): Promise<boolean> {
+    try {
+      const response = await api.get(`/subscriptions/subscriptions/?business=${businessId}&customer=${customerId}&status=AC,TR`);
+      return response.data.results.length > 0;
+    } catch (error) {
+      console.error('Error checking active subscription:', error);
+      throw error;
+    }
+  }
+
   // Create a new subscription
   async createSubscription(data: CreateSubscriptionData): Promise<Subscription> {
     try {
@@ -85,9 +108,9 @@ export class SubscriptionService {
   }
 
   // Update a subscription
-  async updateSubscription(subscriptionId: number, data: UpdateSubscriptionData): Promise<Subscription> {
+  async updateSubscription(id: number, data: UpdateSubscriptionData): Promise<Subscription> {
     try {
-      const response = await api.patch(`/subscriptions/subscriptions/${subscriptionId}/`, data);
+      const response = await api.patch(`/subscriptions/subscriptions/${id}/`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating subscription:', error);
@@ -96,11 +119,22 @@ export class SubscriptionService {
   }
 
   // Cancel a subscription
-  async cancelSubscription(subscriptionId: number): Promise<void> {
+  async cancelSubscription(subscriptionId: number, endDate?: string): Promise<void> {
     try {
-      await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`);
+      await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`, { end_date: endDate });
     } catch (error) {
       console.error('Error cancelling subscription:', error);
+      throw error;
+    }
+  }
+
+  // Convert trial to active subscription
+  async convertTrialToActive(subscriptionId: number): Promise<Subscription> {
+    try {
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/convert-trial/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error converting trial to active:', error);
       throw error;
     }
   }
@@ -121,6 +155,17 @@ export class SubscriptionService {
       await api.delete(`/subscriptions/subscriptions/${subscriptionId}/`);
     } catch (error) {
       console.error('Error deleting subscription:', error);
+      throw error;
+    }
+  }
+
+  // Get payment history for a subscription
+  async getPaymentHistory(subscriptionId: number): Promise<Payment[]> {
+    try {
+      const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/payments/`);
+      return response.data.results;
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
       throw error;
     }
   }

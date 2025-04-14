@@ -70,21 +70,21 @@ export default function PlansPage({ params }: { params: { businessId: string } }
   });
 
   // Update form reset to handle features properly when editing
-  useEffect(() => {
-    if (selectedPlan) {
-      // Convert Postman format back to textarea format
-      const featuresText = Object.entries(selectedPlan.features)
-        .filter(([_, value]) => value)
-        .map(([key]) => key.replace(/_/g, ' '))
-        .join('\n');
+  // useEffect(() => {
+  //   if (selectedPlan) {
+  //     // Convert Postman format back to textarea format
+  //     const featuresText = Object.entries(selectedPlan.features)
+  //       .filter(([_, value]) => value)
+  //       .map(([key]) => key.replace(/_/g, ' '))
+  //       .join('\n');
 
-      methods.reset({
-        ...selectedPlan,
-        features: featuresText,
-        is_active: selectedPlan.is_active
-      });
-    }
-  }, [selectedPlan, methods]);
+  //     methods.reset({
+  //       ...selectedPlan,
+  //       features: featuresText,
+  //       is_active: selectedPlan.is_active
+  //     });
+  //   }
+  // }, [selectedPlan, methods]);
 
   useEffect(() => {
     loadPlans();
@@ -597,7 +597,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                     Features:
                   </span>
-                  <ul className="space-y-1">
+                  {/* <ul className="space-y-1">
                     {Object.entries(plan.features)
                       .filter(([_, value]) => value)
                       .map(([feature], index) => (
@@ -606,7 +606,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                           <span className="text-sm text-gray-600 dark:text-gray-400">{feature}</span>
                         </li>
                       ))}
-                  </ul>
+                  </ul> */}
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">

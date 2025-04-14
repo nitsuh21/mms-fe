@@ -62,19 +62,21 @@ export interface PlanUpdateData {
 
 export interface Plan {
   id: number;
+  business: number;
   name: string;
   description: string;
-  price: number;
+  price: string;
   currency: string;
   interval: 'D' | 'W' | 'M' | 'Y';
   trial_days: number;
-  features: Record<string, boolean>;
+  has_trial: boolean;
+  duration_months: number;
+  features: Record<string, any>;
   is_active: boolean;
-  business: string;
-  discounts?: Discount[];
-  activeSubscribers?: number;
   created_at: string;
   updated_at: string;
+  discounts?: Discount[];
+  activeSubscribers?: number;
 }
 
 export interface CreatePlanData {
@@ -215,4 +217,3 @@ export class PlanService {
 }
 
 export default PlanService;
-

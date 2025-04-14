@@ -136,7 +136,7 @@ export default function MembersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Team Members
+          Members
         </h1>
         <div className="flex items-center gap-4">
           <div className="relative">
@@ -354,7 +354,7 @@ export default function MembersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => handleUpdateMember(member.id, { is_active: !member.is_active })}
+                        onClick={() => handleUpdateMember(member.id, { is_active: !member.is_active, business: Number(businessId), first_name: member.first_name, last_name: member.last_name, email: member.email, phone: member.phone })}
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         {member.is_active ? 'Deactivate' : 'Activate'}
