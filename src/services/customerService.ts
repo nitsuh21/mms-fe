@@ -1,9 +1,9 @@
 import api from "./api";
 
 export interface Customer {
+  customer_id: string;
   id: number;
   business: number;
-  user: number | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -11,92 +11,98 @@ export interface Customer {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  sync_status?: string;
-  membership_request_id?: number;
-  membership_status?: string;
-}
-
-export interface CreateCustomerData {
-  business: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  is_active?: boolean;
-}
-
-export interface UpdateCustomerData {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
-  is_active?: boolean;
 }
 
 export interface MembershipRequest {
   id: number;
   business: number;
   customer: Customer;
-  user?: number;
   type: string;
-  status: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
   created_at: string;
   updated_at: string;
 }
 
-export interface MembershipRequestData {
+export interface CreateCustomerData {
   business: number;
-  email: string;
   first_name: string;
   last_name: string;
+  customer_id: string;
+  email: string;
   phone: string;
+  is_active?: boolean;
 }
 
-export interface MembershipRequestFilter {
-  type?: string;
-  status?: string;
+export interface UpdateCustomerData extends Partial<CreateCustomerData> {}
+
+export interface CreateCustomerResponse {
+  customer: Customer;
+  membership_request: MembershipRequest;
+  message?: string;
 }
 
 export class CustomerService {
-  // Get all customers for a business
-  async getCustomers(businessId: string): Promise<Customer[]> {
+  // Get customers for a business
+  async getCustomers(): Promise<Customer[]> {
     try {
-      const response = await api.get(`/subscriptions/customers/?business=${businessId}`);
-      return response.data.results;
-    } catch (error) {
+      const response = await api.get(`/subscriptions/customers/`);
+      console.log("Raw response:", response);
+      console.log("Response data:", response.data);
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return response.data?.results || [];
+    } catch (error: any) {
       console.error('Error fetching customers:', error);
-      throw error;
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.message || error.response.data.error);
+      }
+      throw new Error('Failed to fetch customers. Please try again.');
     }
   }
 
-  // Get a specific customer
+  // Get a single customer
   async getCustomer(customerId: number): Promise<Customer> {
     try {
       const response = await api.get(`/subscriptions/customers/${customerId}/`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching customer:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
       throw error;
     }
   }
 
   // Create a new customer (with membership request)
-  async createCustomer(data: CreateCustomerData): Promise<Customer> {
+  async createCustomer(data: CreateCustomerData): Promise<CreateCustomerResponse> {
     try {
-      const response = await api.post(`/subscriptions/businesses/${data.business}/customers/`, {
+      const response = await api.post(`/subscriptions/customers/`, {
+        business: data.business,
         email: data.email,
         first_name: data.first_name,
         last_name: data.last_name,
+        customer_id: data.customer_id,
         phone: data.phone,
         is_active: data.is_active ?? true
       });
-      return response.data.customer;
+      return response.data;
     } catch (error: any) {
       console.error('Error creating customer:', error);
-      if (error.response?.data?.detail) {
+      if (error.response?.data?.details?.non_field_errors) {
+        throw new Error(error.response.data.details.non_field_errors.join('\n'));
+      } else if (error.response?.data?.error) {
+        // Handle structured error response
+        const errorData = error.response.data;
+        const errorMessage = errorData.message || 
+          (errorData.details ? Object.values(errorData.details).flat().join('\n') : errorData.error);
+        throw new Error(errorMessage);
+      } else if (error.response?.data?.detail) {
+        // Handle DRF default error format
         throw new Error(error.response.data.detail);
       }
-      throw error;
+      throw new Error('Failed to create member. Please try again.');
     }
   }
 
@@ -105,29 +111,79 @@ export class CustomerService {
     try {
       const response = await api.put(`/subscriptions/customers/${customerId}/`, data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating customer:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
       throw error;
     }
   }
 
   // Delete a customer
-  async deleteCustomer(customerId: number): Promise<void> {
+  async deleteCustomer(memberId: number): Promise<void> {
     try {
-      await api.delete(`/subscriptions/customers/${customerId}/`);
-    } catch (error) {
+      await api.delete(`/subscriptions/customers/${memberId}/`);
+    } catch (error: any) {
       console.error('Error deleting customer:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
       throw error;
     }
   }
 
-  // Get customer's membership status
-  async getCustomerMembershipStatus(customerId: number): Promise<string> {
+  // Get membership requests for a business
+  async getMembershipRequests(businessId: string | number, filters?: { type?: string }): Promise<MembershipRequest[]> {
     try {
-      const response = await api.get(`/subscriptions/customers/${customerId}/membership-status/`);
-      return response.data.status;
-    } catch (error) {
-      console.error('Error fetching membership status:', error);
+      const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests/`, {
+        params: filters
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error getting membership requests:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  }
+
+  // Approve a membership request
+  async approveMembershipRequest(businessId: string | number, requestId: number): Promise<void> {
+    try {
+      await api.post(`/subscriptions/businesses/${businessId}/membership-requests/${requestId}/approve/`);
+    } catch (error: any) {
+      console.error('Error approving membership request:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  }
+
+  // Reject a membership request
+  async rejectMembershipRequest(businessId: string | number, requestId: number): Promise<void> {
+    try {
+      await api.post(`/subscriptions/businesses/${businessId}/membership-requests/${requestId}/reject/`);
+    } catch (error: any) {
+      console.error('Error rejecting membership request:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  }
+
+  // Cancel a membership request
+  async cancelMembershipRequest(requestId: number): Promise<void> {
+    try {
+      await api.delete(`/subscriptions/membership-requests/${requestId}/`);
+    } catch (error: any) {
+      console.error('Error canceling membership request:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
       throw error;
     }
   }
@@ -143,33 +199,36 @@ export class CustomerService {
     }
   }
 
-  // Cancel a membership request
-  async cancelMembershipRequest(requestId: number): Promise<void> {
-    try {
-      await api.delete(`/subscriptions/membership-requests/${requestId}/`);
-    } catch (error) {
-      console.error('Error canceling membership request:', error);
-      throw error;
-    }
-  }
-
-  // Get membership requests
-  async getMembershipRequests(businessId: string, filters?: MembershipRequestFilter): Promise<MembershipRequest[]> {
+  // Get membership requests made
+  async getMembershipRequestsMade(businessId: string, filters?: { type?: string; status?: string }): Promise<MembershipRequest[]> {
     try {
       const params = new URLSearchParams();
       if (filters?.type) params.append('type', filters.type);
       if (filters?.status) params.append('status', filters.status);
       
-      const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests-made/?${params.toString()}`);
-      return response.data.results;
+      const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests/`, {
+        params: filters
+      });
+      return response.data;
     } catch (error) {
       console.error('Error fetching membership requests:', error);
       throw error;
     }
   }
 
-  // Approve a membership request
-  async approveMembershipRequest(businessId: string, requestId: number): Promise<MembershipRequest> {
+  // Get customer's membership status
+  async getCustomerMembershipStatus(customerId: number): Promise<string> {
+    try {
+      const response = await api.get(`/subscriptions/customers/${customerId}/membership-status/`);
+      return response.data.status;
+    } catch (error) {
+      console.error('Error fetching membership status:', error);
+      throw error;
+    }
+  }
+
+  // Approve a membership request made
+  async approveMembershipRequestMade(businessId: string, requestId: number): Promise<MembershipRequest> {
     try {
       const response = await api.post(`/subscriptions/businesses/${businessId}/sync-requests/${requestId}/approve/`);
       return response.data;

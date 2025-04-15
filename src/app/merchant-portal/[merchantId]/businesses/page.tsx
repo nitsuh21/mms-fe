@@ -4,33 +4,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { FiEdit, FiTrash2, FiEye } from "react-icons/fi";
 
-// Mock data for businesses
-const mockBusinesses = [
-  {
-    id: "1",
-    name: "Fitness Studio",
-    location: "New York",
-    status: "active",
-    memberCount: 120,
-    planCount: 3,
-  },
-  {
-    id: "2",
-    name: "Yoga Center",
-    location: "Los Angeles",
-    status: "active",
-    memberCount: 350,
-    planCount: 5,
-  },
-  {
-    id: "3",
-    name: "Dance Academy",
-    location: "Chicago",
-    status: "inactive",
-    memberCount: 75,
-    planCount: 2,
-  },
-];
 
 export default function BusinessesPage() {
   const params = useParams();
