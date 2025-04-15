@@ -13,15 +13,7 @@ export interface Customer {
   updated_at: string;
 }
 
-export interface MembershipRequest {
-  id: number;
-  business: number;
-  customer: Customer;
-  type: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  created_at: string;
-  updated_at: string;
-}
+import { MembershipRequest } from '@/types/membership';
 
 export interface CreateCustomerData {
   business: number;
@@ -40,6 +32,13 @@ export interface CreateCustomerResponse {
   membership_request: MembershipRequest;
   message?: string;
 }
+
+const transformMembershipRequest = (data: any): MembershipRequest => ({
+  ...data,
+  business_name: data.business_name || '',
+  user_email: data.user_email || null,
+  customer_email: data.customer_email || '',
+});
 
 export class CustomerService {
   // Get customers for a business
@@ -75,6 +74,50 @@ export class CustomerService {
     }
   }
 
+  // Create a membership request
+  async createMembershipRequest(businessId: number, customerId: number, type: string = 'MEMBER'): Promise<MembershipRequest> {
+    try {
+      const response = await api.post(`/subscriptions/businesses/${businessId}/membership-requests/`, {
+        customer: customerId,
+        type: type
+      });
+      return transformMembershipRequest(response.data);
+    } catch (error: any) {
+      console.error('Error creating membership request:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw new Error('Failed to create membership request. Please try again.');
+    }
+  }
+
+  // Get membership requests for a business
+  async getMembershipRequests(businessId: string | number, filters?: { type?: string }): Promise<MembershipRequest[]> {
+    try {
+      const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests/`, {
+        params: filters
+      });
+      return response.data.map(transformMembershipRequest);
+    } catch (error: any) {
+      console.error('Error getting membership requests:', error);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  }
+
+  // Get membership request details
+  async getMembershipRequestDetails(requestId: number): Promise<MembershipRequest> {
+    try {
+      const response = await api.get(`/subscriptions/membership-requests/${requestId}/`);
+      return transformMembershipRequest(response.data);
+    } catch (error) {
+      console.error('Error fetching membership request details:', error);
+      throw error;
+    }
+  }
+
   // Create a new customer (with membership request)
   async createCustomer(data: CreateCustomerData): Promise<CreateCustomerResponse> {
     try {
@@ -87,7 +130,14 @@ export class CustomerService {
         phone: data.phone,
         is_active: data.is_active ?? true
       });
-      return response.data;
+
+      // Create a membership request for this customer
+      const membershipRequest = await this.createMembershipRequest(data.business, response.data.id);
+
+      return {
+        customer: response.data,
+        membership_request: membershipRequest
+      };
     } catch (error: any) {
       console.error('Error creating customer:', error);
       if (error.response?.data?.details?.non_field_errors) {
@@ -126,22 +176,6 @@ export class CustomerService {
       await api.delete(`/subscriptions/customers/${memberId}/`);
     } catch (error: any) {
       console.error('Error deleting customer:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
-    }
-  }
-
-  // Get membership requests for a business
-  async getMembershipRequests(businessId: string | number, filters?: { type?: string }): Promise<MembershipRequest[]> {
-    try {
-      const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests/`, {
-        params: filters
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Error getting membership requests:', error);
       if (error.response?.data?.detail) {
         throw new Error(error.response.data.detail);
       }
@@ -188,17 +222,6 @@ export class CustomerService {
     }
   }
 
-  // Get membership request details
-  async getMembershipRequestDetails(requestId: number): Promise<MembershipRequest> {
-    try {
-      const response = await api.get(`/subscriptions/membership-requests/${requestId}/`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching membership request details:', error);
-      throw error;
-    }
-  }
-
   // Get membership requests made
   async getMembershipRequestsMade(businessId: string, filters?: { type?: string; status?: string }): Promise<MembershipRequest[]> {
     try {
@@ -209,7 +232,7 @@ export class CustomerService {
       const response = await api.get(`/subscriptions/businesses/${businessId}/membership-requests/`, {
         params: filters
       });
-      return response.data;
+      return response.data.map(transformMembershipRequest);
     } catch (error) {
       console.error('Error fetching membership requests:', error);
       throw error;
@@ -231,7 +254,7 @@ export class CustomerService {
   async approveMembershipRequestMade(businessId: string, requestId: number): Promise<MembershipRequest> {
     try {
       const response = await api.post(`/subscriptions/businesses/${businessId}/sync-requests/${requestId}/approve/`);
-      return response.data;
+      return transformMembershipRequest(response.data);
     } catch (error) {
       console.error('Error approving membership request:', error);
       throw error;

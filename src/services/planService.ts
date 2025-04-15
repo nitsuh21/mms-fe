@@ -133,7 +133,7 @@ export class PlanService {
   // Get all plans for a business
   static async getPlans(businessId: string): Promise<Plan[]> {
     try {
-      const response = await api.get(`/subscriptions/plans/?business=${businessId}`);
+      const response = await api.get(`/subscriptions/subscription-plans/?business=${businessId}`);
       return response.data.results;
     } catch (error) {
       console.error('Error fetching plans:', error);
@@ -144,7 +144,7 @@ export class PlanService {
   // Get a specific plan
   static async getPlan(planId: number): Promise<Plan> {
     try {
-      const response = await api.get(`/subscriptions/plans/${planId}/`);
+      const response = await api.get(`/subscriptios/subscription-plans/${planId}/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching plan:', error);
@@ -155,7 +155,7 @@ export class PlanService {
   // Create a new plan
   static async createPlan(data: CreatePlanData): Promise<Plan> {
     try {
-      const response = await api.post(`/subscriptions/plans/`, data);
+      const response = await api.post(`/subscriptios/subscription-plans/`, data);
       return response.data;
     } catch (error) {
       console.error('Error creating plan:', error);
@@ -166,7 +166,7 @@ export class PlanService {
   // Update a plan
   static async updatePlan(planId: number, data: UpdatePlanData): Promise<Plan> {
     try {
-      const response = await api.patch(`/subscriptions/plans/${planId}/`, data);
+      const response = await api.patch(`/subscriptios/subscription-plans/${planId}/`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating plan:', error);
@@ -177,7 +177,7 @@ export class PlanService {
   // Delete a plan
   static async deletePlan(planId: number): Promise<void> {
     try {
-      await api.delete(`/subscriptions/plans/${planId}/`);
+      await api.delete(`/subscriptios/subscription-plans/${planId}/`);
     } catch (error) {
       console.error('Error deleting plan:', error);
       throw error;
@@ -187,7 +187,7 @@ export class PlanService {
   // Get subscribers for a plan
   static async getPlanSubscribers(planId: number): Promise<any[]> {
     try {
-      const response = await api.get(`/subscriptions/plans/${planId}/subscribers/`);
+      const response = await api.get(`/subscriptios/subscription-plans/${planId}/subscribers/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching plan subscribers:', error);
@@ -198,7 +198,7 @@ export class PlanService {
   // Apply a discount to a plan
   static async applyDiscount(planId: number, discountId: string): Promise<void> {
     try {
-      await api.post(`/subscriptions/plans/${planId}/discounts/`, { discount: discountId });
+      await api.post(`/subscriptios/subscription-plans/${planId}/discounts/`, { discount: discountId });
     } catch (error) {
       console.error('Error applying discount:', error);
       throw error;
@@ -208,7 +208,7 @@ export class PlanService {
   // Remove a discount from a plan
   static async removeDiscount(planId: number, discountId: string): Promise<void> {
     try {
-      await api.delete(`/subscriptions/plans/${planId}/discounts/${discountId}/`);
+      await api.delete(`/subscriptios/subscription-plans/${planId}/discounts/${discountId}/`);
     } catch (error) {
       console.error('Error removing discount:', error);
       throw error;
