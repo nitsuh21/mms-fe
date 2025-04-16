@@ -131,22 +131,32 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
 const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = false): string => {
   try {
     const date = new Date(startDate);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid start date');
-    }
 
     // If using trial, subscription duration starts after trial
     if (useTrial && plan.has_trial) {
       date.setDate(date.getDate() + plan.trial_days);
     }
     
-    // Add subscription duration
-    const currentMonth = date.getMonth();
-    date.setMonth(currentMonth + plan.duration_months);
-    
-    // Handle month overflow (e.g., Jan 31 + 1 month should go to Feb 28/29)
-    if (date.getMonth() !== ((currentMonth + plan.duration_months) % 12)) {
-      date.setDate(0); // Set to last day of previous month
+    // Add subscription duration based on interval
+    switch (plan.interval) {
+      case 'D':
+        date.setDate(date.getDate() + 1);
+        break;
+      case 'W':
+        date.setDate(date.getDate() + 7);
+        break;
+      case 'M':
+        date.setMonth(date.getMonth() + 1);
+        // Handle month overflow (e.g., Jan 31 + 1 month should go to Feb 28/29)
+        if (date.getDate() < new Date(startDate).getDate()) {
+          date.setDate(0); // Set to last day of previous month
+        }
+        break;
+      case 'Y':
+        date.setFullYear(date.getFullYear() + 1);
+        break;
+      default:
+        throw new Error('Invalid interval');
     }
 
     return date.toISOString().split('T')[0];

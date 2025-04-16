@@ -24,6 +24,18 @@ const calculateDiscountedPrice = (originalPrice: number, discounts?: Discount[])
   }
 };
 
+interface PlanFormData {
+  name?: string;
+  description?: string;
+  price?: number;
+  discounted_price?: number;
+  currency?: string;
+  interval?: 'D' | 'W' | 'M' | 'Y';
+  trial_days?: number;
+  features?: string;
+  is_active?: boolean | string;
+}
+
 export default function PlansPage({ params }: { params: { businessId: string } }) {
   const unwrappedParams = use(params as unknown as Promise<{ businessId: string }>);
   const businessId = unwrappedParams.businessId;
@@ -34,33 +46,31 @@ export default function PlansPage({ params }: { params: { businessId: string } }
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<number | null>(null);
   const { addNotification } = useNotification();
-  const methods = useForm<CreatePlanData | UpdatePlanData>({
+  const methods = useForm<PlanFormData>({
     defaultValues: {
       name: '',
       description: '',
-      business: '',
       price: 0,
+      discounted_price: 0,
       currency: 'ETB',
       interval: 'M',
       trial_days: 0,
-      features: {},
-      is_active: true,
+      features: '',
+      is_active: true
     },
     resolver: (data) => {
-      // Convert features from textarea to Postman format
-      const features = data.features || {};
-      const featureArray = (typeof features === 'string') ? features.split('\n').filter(f => f.trim()) : [];
-      const featureObject = featureArray.reduce((acc, feature) => {
-        const key = feature.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
-        return { ...acc, [key]: true };
-      }, {});
+      // Convert features from textarea to string
+      const features = data.features || '';
 
       return {
         values: {
           ...data,
-          features: featureObject,
+          features: features,
           price: Number(data.price),
+          discounted_price: Number(data.discounted_price), 
           trial_days: Number(data.trial_days),
           is_active: typeof data.is_active === 'string' ? data.is_active === 'true' : data.is_active
         },
@@ -69,22 +79,36 @@ export default function PlansPage({ params }: { params: { businessId: string } }
     }
   });
 
-  // Update form reset to handle features properly when editing
-  // useEffect(() => {
-  //   if (selectedPlan) {
-  //     // Convert Postman format back to textarea format
-  //     const featuresText = Object.entries(selectedPlan.features)
-  //       .filter(([_, value]) => value)
-  //       .map(([key]) => key.replace(/_/g, ' '))
-  //       .join('\n');
+  useEffect(() => {
+    if (selectedPlan) {
+      // Get features as string
+      const featuresString = selectedPlan.features || '';
 
-  //     methods.reset({
-  //       ...selectedPlan,
-  //       features: featuresText,
-  //       is_active: selectedPlan.is_active
-  //     });
-  //   }
-  // }, [selectedPlan, methods]);
+      methods.reset({
+        name: selectedPlan.name,
+        description: selectedPlan.description,
+        price: Number(selectedPlan.price),
+        discounted_price: Number(selectedPlan.discounted_price || selectedPlan.price),
+        currency: selectedPlan.currency,
+        interval: selectedPlan.interval,
+        trial_days: Number(selectedPlan.trial_days),
+        features: featuresString,
+        is_active: selectedPlan.is_active,
+      });
+    } else {
+      methods.reset({
+        name: '',
+        description: '',
+        price: 0,
+        discounted_price: 0,
+        currency: 'ETB',
+        interval: 'M',
+        trial_days: 0,
+        features: '',
+        is_active: true,
+      });
+    }
+  }, [selectedPlan, methods]);
 
   useEffect(() => {
     loadPlans();
@@ -124,84 +148,85 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
   const handleAddPlan = async (data: CreatePlanData) => {
     try {
-      const newPlan = await PlanService.createPlan(data);
-      setPlans(prevPlans => [...prevPlans, newPlan]);
+      await PlanService.createPlan({ ...data, business: businessId });
       addNotification({
         type: 'success',
-        title: 'Plan Added',
-        message: 'New subscription plan has been successfully created.',
+        title: 'Success',
+        message: 'Plan created successfully',
       });
       setShowAddPlan(false);
+      methods.reset();
+      await loadPlans(); // Wait for plans to refresh
     } catch (err) {
+      console.error('Error creating plan:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to create subscription plan',
+        message: 'Failed to create plan',
       });
-      console.error(err);
     }
   };
 
   const handleUpdatePlan = async (planId: number, data: UpdatePlanData) => {
     try {
-      const updatedPlan = await PlanService.updatePlan(planId, data);
-      setPlans(prevPlans => prevPlans.map(plan => 
-        plan.id === planId ? updatedPlan : plan
-      ));
+      await PlanService.updatePlan(planId, data);
       addNotification({
         type: 'success',
-        title: 'Plan Updated',
-        message: 'Subscription plan has been successfully updated.',
+        title: 'Success',
+        message: 'Plan updated successfully',
       });
+      setSelectedPlan(null); // Close modal
+      methods.reset(); // Reset form
+      loadPlans(); // Refresh plans list
     } catch (err) {
+      console.error('Error updating plan:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to update subscription plan',
+        message: 'Failed to update plan',
       });
-      console.error(err);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this subscription plan?')) return;
-
     try {
       await PlanService.deletePlan(id);
-      setPlans(prevPlans => prevPlans.filter(plan => plan.id !== id));
       addNotification({
         type: 'success',
-        title: 'Plan Deleted',
-        message: 'Subscription plan has been successfully deleted.',
+        title: 'Success',
+        message: 'Plan deleted successfully',
       });
+      setShowDeleteModal(false);
+      setPlanToDelete(null);
+      loadPlans(); // Refresh the plans list
     } catch (err) {
+      console.error('Error deleting plan:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to delete subscription plan',
+        message: 'Failed to delete plan',
       });
-      console.error(err);
     }
   };
 
   const handleConnectDiscount = async (planId: number, discountId: string) => {
     try {
-      const response = await api.post(`/subscriptions/plans/${planId}/discounts/${discountId}/apply/`);
-      const updatedPlans = await PlanService.getPlans(businessId);
-      setPlans(updatedPlans);
+      await PlanService.applyDiscount(planId, discountId);
       addNotification({
         type: 'success',
-        title: 'Discount Connected',
-        message: 'Discount has been successfully connected to the plan.',
+        title: 'Success',
+        message: 'Discount connected successfully',
       });
       setShowDiscountModal(false);
+      setSelectedDiscount(null);
+      loadPlans(); // Refresh the plans list
     } catch (err) {
+      console.error('Error connecting discount:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to connect discount to plan',
+        message: 'Failed to connect discount',
       });
-      console.error(err);
     }
   };
 
@@ -225,297 +250,64 @@ export default function PlansPage({ params }: { params: { businessId: string } }
     }
   };
 
-  const onSubmit = async (data: CreatePlanData | UpdatePlanData) => {
-    const planData = {
-      business: businessId,
-      name: data.name || '',
-      description: data.description || '',
-      interval: data.interval || 'M',
-      price: Number(data.price) || 0,
-      currency: 'ETB',
-      trial_days: Number(data.trial_days) || 0,
-      features: data.features || {},
-      is_active: data.is_active !== false
-    };
+  const onSubmit = async (data: PlanFormData) => {
+    try {
+      // Get features as string
+      const features = data.features || '';
 
-    if (selectedPlan) {
-      await handleUpdatePlan(selectedPlan.id, planData);
-    } else {
-      await handleAddPlan(planData);
+      const price = Number(data.price) || 0;
+      
+      const planData = {
+        business: businessId,
+        name: data.name || '',
+        description: data.description || '',
+        interval: data.interval || 'M',
+        price: price,
+        discounted_price: selectedPlan ? (Number(data.discounted_price) || price) : price, // Always use price as fallback
+        currency: 'ETB',
+        trial_days: Number(data.trial_days) || 0,
+        features: features,
+        is_active: data.is_active === 'true' || data.is_active === true
+      };
+
+      if (selectedPlan) {
+        await PlanService.updatePlan(selectedPlan.id, planData);
+        addNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'Plan updated successfully',
+        });
+      } else {
+        await PlanService.createPlan(planData);
+        addNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'Plan created successfully',
+        });
+      }
+
+      setShowAddPlan(false);
+      setSelectedPlan(null);
+      methods.reset();
+      loadPlans();
+    } catch (error) {
+      console.error('Error submitting plan:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Error saving plan',
+      });
     }
-    methods.reset();
-    setSelectedPlan(null);
   };
 
-  if (showAddPlan) {
-    return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl dark:bg-gray-800">
-          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {selectedPlan ? 'Edit Subscription Plan' : 'Add New Subscription Plan'}
-            </h2>
-          </div>
-          <form onSubmit={methods.handleSubmit(onSubmit)} className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Plan Name
-                </label>
-                <input
-                  {...methods.register('name')}
-                  type="text"
-                  id="name"
-                  className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                  placeholder="Basic Plan"
-                />
-                {methods.formState.errors.name && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
-                </label>
-                <textarea
-                  {...methods.register('description')}
-                  id="description"
-                  rows={3}
-                  className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                  placeholder="Enter plan description"
-                />
-                {methods.formState.errors.description && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.description.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Price
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400">ETB</span>
-                  <input
-                    {...methods.register('price')}
-                    type="number"
-                    id="price"
-                    step="0.01"
-                    min="0"
-                    className="w-full rounded-lg border bg-white pl-10 pr-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                    placeholder="0.00"
-                  />
-                </div>
-                {methods.formState.errors.price && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.price.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Billing Interval
-                </label>
-                <select
-                  {...methods.register('interval')}
-                  id="interval"
-                  className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  <option value="M">Monthly</option>
-                  <option value="Y">Annual</option>
-                </select>
-                {methods.formState.errors.interval && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.interval.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="trial_days" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Trial Period (days)
-                </label>
-                <input
-                  {...methods.register('trial_days')}
-                  type="number"
-                  id="trial_days"
-                  min="0"
-                  className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                  placeholder="0"
-                />
-                {methods.formState.errors.trial_days && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.trial_days.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="is_active" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <select
-                  {...methods.register('is_active')}
-                  id="is_active"
-                  className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-                {methods.formState.errors.is_active && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {methods.formState.errors.is_active.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div>
-              <label htmlFor="features" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Features (one per line)
-              </label>
-              <textarea
-                {...methods.register('features')}
-                id="features"
-                rows={4}
-                className="w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                placeholder="Feature 1\nFeature 2\nFeature 3"
-              />
-              {methods.formState.errors.features && (
-                <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-                  {methods.formState.errors.features.message}
-                </p>
-              )}
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={() => {
-                  methods.reset();
-                  setSelectedPlan(null);
-                  setShowAddPlan(false);
-                }}
-                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
-              >
-                {selectedPlan ? 'Update Plan' : 'Add Plan'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  if (showDiscountModal && selectedPlan) {
-    return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl dark:bg-gray-800">
-          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {selectedDiscount ? 'Edit Discount Connection' : 'Add Discount'}
-            </h2>
-          </div>
-          <div className="p-6 space-y-6">
-            {selectedDiscount ? (
-              <div>
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                      {selectedDiscount.discount_type === 'P' 
-                        ? `${selectedDiscount.discount_value}%` 
-                        : `ETB ${selectedDiscount.discount_value}`}
-                    </span>
-                    <span className="text-lg font-semibold text-gray-900 pl-2 dark:text-white">{selectedDiscount.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Valid From:</span>
-                    <span className="px-2 py-1 text-sm rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                      {new Date(selectedDiscount.valid_from).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Valid Until:</span>
-                    <span className="px-2 py-1 text-sm rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                      {new Date(selectedDiscount.valid_until).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
-                  Select a discount to connect with this plan:
-                </p>
-                <div className="grid gap-4">
-                  {discounts?.map((discount: Discount) => (
-                    <div
-                      key={discount.id}
-                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
-                    >
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center">
-                              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                                {discount.discount_type === 'P' 
-                                  ? `${discount.discount_value}%` 
-                                  : `ETB ${discount.discount_value}`}
-                              </span>
-                              <span className="text-lg font-semibold text-gray-900 pl-2 dark:text-white">{discount.name}</span>
-                            </div>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {new Date(discount.valid_from).toLocaleDateString()} - 
-                              {new Date(discount.valid_until).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleConnectDiscount(selectedPlan.id, discount.id)}
-                            className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
-                          >
-                            Connect
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Type:</span>
-                          <span className="px-2 py-1 text-sm rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
-                            {discount.discount_type === 'P' ? 'Percentage' : 'Fixed Amount'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
-                          <span className="px-2 py-1 text-sm rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                            {discount.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-        <h1 className="text-2xl font-bold">Subscription Plans</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Subscription Plans</h1>
         <button
           onClick={() => {
-            setShowAddPlan(true);
             setSelectedPlan(null);
+            setShowAddPlan(true);
           }}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
@@ -523,147 +315,383 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         </button>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {isLoading ? (
-          <div className="col-span-2 text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">Loading plans...</p>
-          </div>
-        ) : (
-          plans.map((plan) => (
-            <div
-              key={plan.id}
-              className="relative rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800"
-            >
-              {/* Plan Header */}
-              <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{plan.description}</p>
+      {/* Plan Form Modal */}
+      {(showAddPlan || selectedPlan) && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-[95%] max-w-4xl p-6">
+            <h2 className="text-xl font-bold mb-4">
+              {selectedPlan ? 'Edit Plan' : 'Add New Plan'}
+            </h2>
+            {/* Form content */}
+            <form onSubmit={methods.handleSubmit(onSubmit)} className="p-4 sm:p-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      {...methods.register('name')}
+                      className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      placeholder="Basic Plan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      id="description"
+                      {...methods.register('description')}
+                      className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      placeholder="Basic features for small businesses"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Price <span className="text-red-500">*</span>
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">ETB</span>
+                      </div>
+                      <input
+                        type="float"
+                        id="price"
+                        {...methods.register('price')}
+                        min="0"
+                        className="w-full rounded-lg border bg-white pl-10 pr-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {selectedPlan && (
+                    <div>
+                      <label htmlFor="discounted_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Discounted Price <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">ETB</span>
+                        </div>
+                        <input
+                          type="float"
+                          id="discounted_price"
+                          {...methods.register('discounted_price')}
+                          min="0"
+                          className="w-full rounded-lg border bg-white pl-10 pr-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                          placeholder="0.00"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Billing Interval <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="interval"
+                      {...methods.register('interval')}
+                      className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      required
+                    >
+                      <option value="D">Daily</option>
+                      <option value="W">Weekly</option>
+                      <option value="M">Monthly</option>
+                      <option value="Y">Yearly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="trial_days" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Trial Period (days)
+                    </label>
+                    <input
+                      type="number"
+                      id="trial_days"
+                      {...methods.register('trial_days')}
+                      min="0"
+                      className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="is_active" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="is_active"
+                      {...methods.register('is_active')}
+                      className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      required
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="features" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Features (one per line)
+                  </label>
+                  <textarea
+                    id="features"
+                    {...methods.register('features')}
+                    rows={4}
+                    className="mt-1 w-full rounded-lg border bg-white px-4 py-2 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    placeholder={`Feature 1\nFeature 2\nFeature 3`}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddPlan(false);
+                    setSelectedPlan(null);
+                    methods.reset();
+                  }}
+                  className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm text-white bg-brand-600 rounded hover:bg-brand-700"
+                >
+                  {selectedPlan ? 'Update Plan' : 'Add Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">Delete Plan</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete this plan? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setPlanToDelete(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (planToDelete !== null) {
+                    handleDelete(planToDelete);
+                  }
+                  setShowDeleteModal(false);
+                  setPlanToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connect Discount Modal */}
+      {showDiscountModal && selectedPlan && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full">
+            <h2 className="text-xl font-bold mb-4">Connect Discount to Plan</h2>
+            <div className="space-y-4">
+              {discounts.map((discount) => (
+                <div
+                  key={discount.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded"
+                >
+                  <div>
+                    <h3 className="font-medium">{discount.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {discount.discount_type === 'P' 
+                        ? `${discount.discount_value}% off` 
+                        : `ETB ${discount.discount_value} off`}
+                    </p>
+                  </div>
                   <button
                     onClick={() => {
-                      setSelectedPlan(plan);
-                      setShowAddPlan(true);
+                      handleConnectDiscount(selectedPlan.id, discount.id);
+                      setShowDiscountModal(false);
                     }}
-                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
-                    <FiEdit2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(plan.id)}
-                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
+                    Connect
                   </button>
                 </div>
-              </div>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowDiscountModal(false);
+                  setSelectedPlan(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Plan Details */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Price:</span>
-                  <div className="flex items-center gap-2">
-                    {plan.discounts?.some(d => d.is_active) ? (
-                      <>
-                        <span className="line-through text-sm text-gray-500 dark:text-gray-400">
-                          ${plan.price} / {plan.interval === 'M' ? 'monthly' : 'annual'}
-                        </span>
-                        <span className="text-sm text-blue-600 dark:text-blue-400 font-semibold">
-                          ${calculateDiscountedPrice(plan.price, plan.discounts)} / {plan.interval === 'M' ? 'monthly' : 'annual'}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        ${plan.price} / {plan.interval === 'M' ? 'monthly' : 'annual'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      plan.is_active
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}
-                  >
-                    {plan.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                    Features:
-                  </span>
-                  {/* <ul className="space-y-1">
-                    {Object.entries(plan.features)
-                      .filter(([_, value]) => value)
-                      .map(([feature], index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <FiCheck className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{feature}</span>
-                        </li>
-                      ))}
-                  </ul> */}
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                    Discounts:
-                  </span>
-                  <div className="space-y-2">
-                    {plan.discounts?.length ? (
-                      plan.discounts.map((discount) => (
-                        <div key={discount.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                              {discount.discount_type === 'P' 
-                                ? `${discount.discount_value}%` 
-                                : `ETB ${discount.discount_value}`}
-                            </span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              {discount.name}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(discount.valid_from).toLocaleDateString()} - 
-                              {new Date(discount.valid_until).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to remove this discount?')) {
-                                handleDisconnectDiscount(plan.id, discount.id);
-                              }
-                            }}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400">No discounts connected</p>
-                    )}
-                  </div>
-                </div>
+      {/* Plans List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <div key={plan.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                <p className="text-gray-600 dark:text-gray-400">{plan.description}</p>
               </div>
-
-              {/* Connect Discount Button */}
-              <div className="mt-4">
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
                     setSelectedPlan(plan);
-                    setShowDiscountModal(true);
+                    setShowAddPlan(true);
                   }}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  className="p-2 text-blue-500 hover:text-blue-600"
                 >
-                  Connect Discount
+                  <FiEdit2 className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setPlanToDelete(plan.id);
+                    setShowDeleteModal(true);
+                  }}
+                  className="p-2 text-red-500 hover:text-red-600"
+                >
+                  <FiTrash2 className="h-5 w-5" />
                 </button>
               </div>
             </div>
-          ))
-        )}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Price:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {plan.price} {plan.currency}
+                  {plan.discounted_price !== plan.price && (
+                    <>
+                      <span className="mx-2 text-gray-400">→</span>
+                      <span className="text-green-600 dark:text-green-400">
+                        {plan.discounted_price} {plan.currency}
+                      </span>
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Interval:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {plan.interval === 'D' ? 'Daily' :
+                   plan.interval === 'W' ? 'Weekly' :
+                   plan.interval === 'M' ? 'Monthly' :
+                   'Yearly'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    plan.is_active
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  }`}
+                >
+                  {plan.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Features:
+                </span>
+                <ul className="space-y-1">
+                  {(plan.features?.split('\n') || []).map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <FiCheck className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Discounts:
+                </span>
+                <div className="space-y-2">
+                  {plan.discounts?.length ? (
+                    plan.discounts.map((discount) => (
+                      <div key={discount.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            {discount.discount_type === 'P' 
+                              ? `${discount.discount_value}%` 
+                              : `ETB ${discount.discount_value}`}
+                          </span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {discount.name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(discount.valid_from).toLocaleDateString()} - 
+                            {new Date(discount.valid_until).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to remove this discount?')) {
+                              handleDisconnectDiscount(plan.id, discount.id);
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No discounts connected</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Connect Discount Button */}
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  setSelectedPlan(plan);
+                  setShowDiscountModal(true);
+                }}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              >
+                Connect Discount
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

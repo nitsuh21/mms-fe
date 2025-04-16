@@ -30,7 +30,7 @@ export interface SubscriptionPlan {
   currency: string;
   interval: 'D' | 'W' | 'M' | 'Y';
   trial_days: number;
-  features: Record<string, boolean>;
+  features: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -45,7 +45,7 @@ export interface PlanCreateData {
   currency: string;
   interval: 'D' | 'W' | 'M' | 'Y';
   trial_days: number;
-  features: Record<string, boolean>;
+  features: string;
   is_active?: boolean;
 }
 
@@ -56,27 +56,25 @@ export interface PlanUpdateData {
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
   trial_days?: number;
-  features?: Record<string, boolean>;
+  features?: string;
   is_active?: boolean;
 }
 
 export interface Plan {
   id: number;
-  business: number;
   name: string;
   description: string;
-  price: string;
-  currency: string;
+  business: string;
   interval: 'D' | 'W' | 'M' | 'Y';
+  price: number;
+  discounted_price: number;
+  currency: string;
   trial_days: number;
-  has_trial: boolean;
-  duration_months: number;
-  features: Record<string, any>;
+  features: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   discounts?: Discount[];
-  activeSubscribers?: number;
 }
 
 export interface CreatePlanData {
@@ -85,9 +83,10 @@ export interface CreatePlanData {
   business: string;
   interval: 'D' | 'W' | 'M' | 'Y';
   price: number;
+  discounted_price: number;
   currency: string;
   trial_days: number;
-  features: Record<string, boolean>;
+  features: string;
   is_active?: boolean;
 }
 
@@ -95,11 +94,12 @@ export interface UpdatePlanData {
   name?: string;
   description?: string;
   price?: number;
+  discounted_price?: number;
   business?: string;
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
   trial_days?: number;
-  features?: Record<string, boolean>;
+  features?: string;
   is_active?: boolean;
 }
 
@@ -144,7 +144,7 @@ export class PlanService {
   // Get a specific plan
   static async getPlan(planId: number): Promise<Plan> {
     try {
-      const response = await api.get(`/subscriptios/subscription-plans/${planId}/`);
+      const response = await api.get(`/subscriptions/subscription-plans/${planId}/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching plan:', error);
@@ -155,7 +155,8 @@ export class PlanService {
   // Create a new plan
   static async createPlan(data: CreatePlanData): Promise<Plan> {
     try {
-      const response = await api.post(`/subscriptios/subscription-plans/`, data);
+      console.log("here is the create plandata", data)
+      const response = await api.post(`/subscriptions/subscription-plans/`, data);
       return response.data;
     } catch (error) {
       console.error('Error creating plan:', error);
@@ -166,7 +167,7 @@ export class PlanService {
   // Update a plan
   static async updatePlan(planId: number, data: UpdatePlanData): Promise<Plan> {
     try {
-      const response = await api.patch(`/subscriptios/subscription-plans/${planId}/`, data);
+      const response = await api.patch(`/subscriptions/subscription-plans/${planId}/`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating plan:', error);
@@ -177,7 +178,7 @@ export class PlanService {
   // Delete a plan
   static async deletePlan(planId: number): Promise<void> {
     try {
-      await api.delete(`/subscriptios/subscription-plans/${planId}/`);
+      await api.delete(`/subscriptions/subscription-plans/${planId}/`);
     } catch (error) {
       console.error('Error deleting plan:', error);
       throw error;
@@ -187,7 +188,7 @@ export class PlanService {
   // Get subscribers for a plan
   static async getPlanSubscribers(planId: number): Promise<any[]> {
     try {
-      const response = await api.get(`/subscriptios/subscription-plans/${planId}/subscribers/`);
+      const response = await api.get(`/subscriptions/subscription-plans/${planId}/subscribers/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching plan subscribers:', error);
@@ -198,7 +199,7 @@ export class PlanService {
   // Apply a discount to a plan
   static async applyDiscount(planId: number, discountId: string): Promise<void> {
     try {
-      await api.post(`/subscriptios/subscription-plans/${planId}/discounts/`, { discount: discountId });
+      await api.post(`/subscriptions/subscription-plans/${planId}/discounts/`, { discount: discountId });
     } catch (error) {
       console.error('Error applying discount:', error);
       throw error;
@@ -208,7 +209,7 @@ export class PlanService {
   // Remove a discount from a plan
   static async removeDiscount(planId: number, discountId: string): Promise<void> {
     try {
-      await api.delete(`/subscriptios/subscription-plans/${planId}/discounts/${discountId}/`);
+      await api.delete(`/subscriptions/subscription-plans/${planId}/discounts/${discountId}/`);
     } catch (error) {
       console.error('Error removing discount:', error);
       throw error;
