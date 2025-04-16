@@ -48,6 +48,8 @@ export default function PlansPage({ params }: { params: { businessId: string } }
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<number | null>(null);
+  const [showRemoveDiscountModal, setShowRemoveDiscountModal] = useState(false);
+  const [discountToRemove, setDiscountToRemove] = useState<{planId: number, discountId: string} | null>(null);
   const { addNotification } = useNotification();
   const methods = useForm<PlanFormData>({
     defaultValues: {
@@ -211,7 +213,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
   const handleConnectDiscount = async (planId: number, discountId: string) => {
     try {
-      await PlanService.applyDiscount(planId, discountId);
+      await discountsService.applyToPlan(planId.toString(), discountId);
       addNotification({
         type: 'success',
         title: 'Success',
@@ -219,6 +221,8 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       });
       setShowDiscountModal(false);
       setSelectedDiscount(null);
+      setShowAddPlan(false); // Close edit modal
+      setSelectedPlan(null); // Clear selected plan
       loadPlans(); // Refresh the plans list
     } catch (err) {
       console.error('Error connecting discount:', err);
@@ -227,26 +231,33 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         title: 'Error',
         message: 'Failed to connect discount',
       });
+      setShowDiscountModal(false);
+      setSelectedDiscount(null);
+      setShowAddPlan(false); // Close edit modal even on error
+      setSelectedPlan(null); // Clear selected plan
     }
   };
 
-  const handleDisconnectDiscount = async (planId: number, discountId: string) => {
+  const handleDisconnectDiscount = async () => {
+    if (!discountToRemove) return;
+
     try {
-      const response = await api.post(`/subscriptions/plans/${planId}/discounts/${discountId}/remove/`);
-      const updatedPlans = await PlanService.getPlans(businessId);
-      setPlans(updatedPlans);
+      await discountsService.removeFromPlan(discountToRemove.planId.toString(), discountToRemove.discountId);
       addNotification({
         type: 'success',
         title: 'Discount Removed',
-        message: 'Discount has been successfully removed from the plan.',
+        message: 'Discount has been removed successfully',
       });
+      setShowRemoveDiscountModal(false);
+      setDiscountToRemove(null);
+      loadPlans();
     } catch (err) {
+      console.error('Error removing discount:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to remove discount from plan',
+        message: 'Failed to remove discount',
       });
-      console.error(err);
     }
   };
 
@@ -482,16 +493,14 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">Delete Plan</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to delete this plan? This action cannot be undone.
-            </p>
+            <p className="mb-4">Are you sure you want to delete this plan? This action cannot be undone.</p>
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setPlanToDelete(null);
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
@@ -499,9 +508,9 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                 onClick={() => {
                   if (planToDelete !== null) {
                     handleDelete(planToDelete);
+                    setShowDeleteModal(false);
+                    setPlanToDelete(null);
                   }
-                  setShowDeleteModal(false);
-                  setPlanToDelete(null);
                 }}
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
               >
@@ -512,7 +521,34 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         </div>
       )}
 
-      {/* Connect Discount Modal */}
+      {/* Remove Discount Confirmation Modal */}
+      {showRemoveDiscountModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">Remove Discount</h2>
+            <p className="mb-4">Are you sure you want to remove this discount from the plan?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowRemoveDiscountModal(false);
+                  setDiscountToRemove(null);
+                }}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDisconnectDiscount}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*Connect Discount Modal*/}
       {showDiscountModal && selectedPlan && (
         <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full">
@@ -591,17 +627,24 @@ export default function PlansPage({ params }: { params: { businessId: string } }
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Price:</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {plan.price} {plan.currency}
-                  {plan.discounted_price !== plan.price && (
-                    <>
-                      <span className="mx-2 text-gray-400">→</span>
-                      <span className="text-green-600 dark:text-green-400">
-                        {plan.discounted_price} {plan.currency}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {plan.discounted_price !== plan.price ? (
+                      <span className="line-through text-gray-400 dark:text-gray-500">
+                        {plan.price} {plan.currency}
                       </span>
-                    </>
+                    ) : (
+                      <span>
+                        {plan.price} {plan.currency}
+                      </span>
+                    )}
+                  </span>
+                  {plan.discounted_price !== plan.price && (
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      {plan.discounted_price} {plan.currency}
+                    </span>
                   )}
-                </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Interval:</span>
@@ -661,9 +704,8 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                         </div>
                         <button
                           onClick={() => {
-                            if (window.confirm('Are you sure you want to remove this discount?')) {
-                              handleDisconnectDiscount(plan.id, discount.id);
-                            }
+                            setDiscountToRemove({ planId: plan.id, discountId: discount.id });
+                            setShowRemoveDiscountModal(true);
                           }}
                           className="text-red-500 hover:text-red-700"
                         >
@@ -683,6 +725,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
               <button
                 onClick={() => {
                   setSelectedPlan(plan);
+                  setShowAddPlan(false); // Close edit modal if open
                   setShowDiscountModal(true);
                 }}
                 className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"

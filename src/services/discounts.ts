@@ -110,7 +110,7 @@ export const discountsService = {
 
   applyToPlan: async (planId: string, discountId: string): Promise<void> => {
     try {
-      await api.post(`/subscriptions/plans/${planId}/discounts/${discountId}/apply/`);
+      await api.post(`/subscriptions/subscription-plans/${planId}/discounts/${discountId}/apply/`);
     } catch (error) {
       console.error(`Error applying discount ${discountId} to plan ${planId}:`, error);
       throw error;
@@ -119,7 +119,7 @@ export const discountsService = {
 
   removeFromPlan: async (planId: string, discountId: string): Promise<void> => {
     try {
-      await api.post(`/subscriptions/plans/${planId}/discounts/${discountId}/remove/`);
+      await api.post(`/subscriptions/subscription-plans/${planId}/discounts/${discountId}/remove/`);
     } catch (error) {
       console.error(`Error removing discount ${discountId} from plan ${planId}:`, error);
       throw error;
