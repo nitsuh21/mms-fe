@@ -136,8 +136,15 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
   const loadDiscounts = async () => {
     try {
-      const response = await discountsService.getAll();
-      setDiscounts(response);
+      const fetchedDiscounts = await discountsService.getAll();
+      // Convert string values to numbers
+      const formattedDiscounts = fetchedDiscounts.map((d: any) => ({
+        ...d,
+        discount_value: Number(d.discount_value),
+        max_uses: Number(d.max_uses),
+        times_used: Number(d.times_used)
+      }));
+      setDiscounts(formattedDiscounts);
     } catch (error) {
       console.error('Error loading discounts:', error);
       addNotification({
@@ -694,23 +701,39 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                               ? `${discount.discount_value}%` 
                               : `ETB ${discount.discount_value}`}
                           </span>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {discount.name}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(discount.valid_from).toLocaleDateString()} - 
-                            {new Date(discount.valid_until).toLocaleDateString()}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {discount.name}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {new Date(discount.valid_from).toLocaleDateString()} - 
+                                {new Date(discount.valid_until).toLocaleDateString()}
+                              </span>
+                              {discount.max_uses > 0 && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  ({discount.times_used}/{discount.max_uses} uses)
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            setDiscountToRemove({ planId: plan.id, discountId: discount.id });
-                            setShowRemoveDiscountModal(true);
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center gap-4">
+                          {discount.max_uses > 0 && discount.times_used >= discount.max_uses && (
+                            <span className="text-xs text-red-500">
+                              Usage limit reached
+                            </span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setDiscountToRemove({ planId: plan.id, discountId: discount.id });
+                              setShowRemoveDiscountModal(true);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (

@@ -46,6 +46,7 @@ export interface CreateSubscriptionData {
   end_date?: string;
   status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
   trial_end?: string;
+  next_billing_date: string;
 }
 
 export interface UpdateSubscriptionData {
@@ -65,12 +66,16 @@ export interface Payment {
 export class SubscriptionService {
   // Get all subscriptions for a business
   async getSubscriptions(businessId: string): Promise<Subscription[]> {
+    if (!businessId) {
+      throw new Error('Business ID is required');
+    }
+
     try {
       const response = await api.get(`/subscriptions/subscriptions/?business=${businessId}`);
-      return response.data.results;
-    } catch (error) {
+      return response.data.results || [];
+    } catch (error: any) {
       console.error('Error fetching subscriptions:', error);
-      throw error;
+      throw new Error(error.response?.data?.message || 'Failed to fetch subscriptions');
     }
   }
 
@@ -85,25 +90,45 @@ export class SubscriptionService {
     }
   }
 
-  // Check if a customer has an active subscription
-  async hasActiveSubscription(businessId: string, customerId: number): Promise<boolean> {
-    try {
-      const response = await api.get(`/subscriptions/subscriptions/?business=${businessId}&customer=${customerId}&status=AC,TR`);
-      return response.data.results.length > 0;
-    } catch (error) {
-      console.error('Error checking active subscription:', error);
-      throw error;
-    }
-  }
-
   // Create a new subscription
   async createSubscription(data: CreateSubscriptionData): Promise<Subscription> {
+    // Validate required fields
+    if (!data.business || !data.plan_id || !data.customer_id || !data.start_date) {
+      throw new Error('Missing required fields');
+    }
+
+    // Validate dates
+    const startDate = new Date(data.start_date);
+    if (isNaN(startDate.getTime())) {
+      throw new Error('Invalid start date format');
+    }
+
+    if (data.end_date) {
+      const endDate = new Date(data.end_date);
+      if (isNaN(endDate.getTime())) {
+        throw new Error('Invalid end date format');
+      }
+      if (endDate <= startDate) {
+        throw new Error('End date must be after start date');
+      }
+    }
+
+    if (data.trial_end) {
+      const trialEndDate = new Date(data.trial_end);
+      if (isNaN(trialEndDate.getTime())) {
+        throw new Error('Invalid trial end date format');
+      }
+      if (trialEndDate <= startDate) {
+        throw new Error('Trial end date must be after start date');
+      }
+    }
+
     try {
       const response = await api.post(`/subscriptions/subscriptions/`, data);
       return response.data;
     } catch (error: any) {
       console.error('Error creating subscription:', error.response?.data || error);
-      throw error.response?.data || error;
+      throw new Error(error.response?.data?.message || 'Failed to create subscription');
     }
   }
 
@@ -120,11 +145,25 @@ export class SubscriptionService {
 
   // Cancel a subscription
   async cancelSubscription(subscriptionId: number, endDate?: string): Promise<void> {
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
+    }
+
+    if (endDate) {
+      const date = new Date(endDate);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid end date format');
+      }
+      if (date < new Date()) {
+        throw new Error('End date cannot be in the past');
+      }
+    }
+
     try {
       await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`, { end_date: endDate });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling subscription:', error);
-      throw error;
+      throw new Error(error.response?.data?.message || 'Failed to cancel subscription');
     }
   }
 

@@ -27,6 +27,7 @@ interface EditSubscriptionData {
   plan_id?: number;
   start_date?: string;
   end_date?: string;
+  customer_id?: number;
   trial_end?: string | null;
   use_trial?: boolean;
 }
@@ -35,8 +36,10 @@ const getStatusLabel = (status: string): string => {
   switch (status) {
     case 'AC':
       return 'Active';
-    case 'PD':
+    case 'PE':
       return 'Pending';
+    case 'PD':
+      return 'Past Due';
     case 'CN':
       return 'Cancelled';
     case 'TR':
@@ -52,8 +55,10 @@ const getStatusBadgeColor = (status: string): string => {
   switch (status) {
     case 'AC':
       return 'bg-green-100 text-green-800';
-    case 'PD':
+    case 'PE':
       return 'bg-yellow-100 text-yellow-800';
+    case 'PD':
+      return 'bg-yellow-100 text-red-800';
     case 'CN':
       return 'bg-red-100 text-red-800';
     case 'TR':
@@ -66,23 +71,19 @@ const getStatusBadgeColor = (status: string): string => {
 };
 
 const calculateTrialEndDate = (startDate: string, plan: Plan): string => {
-  try {
-    if (!plan.has_trial) return '';
-    
-    const date = new Date(startDate);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid start date');
-    }
-    
-    date.setDate(date.getDate() + plan.trial_days);
-    return date.toISOString().split('T')[0];
-  } catch (error) {
-    console.error('Error calculating trial end date:', error);
-    // Return a default date 30 days from now as fallback
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 30);
-    return defaultDate.toISOString().split('T')[0];
+  if (!plan.has_trial || !startDate) return '';
+  
+  const date = new Date(startDate);
+  if (isNaN(date.getTime())) {
+    throw new Error('Invalid start date format');
   }
+  
+  if (!plan.trial_days || plan.trial_days <= 0) {
+    throw new Error('Invalid trial days configuration');
+  }
+  
+  date.setDate(date.getDate() + plan.trial_days);
+  return date.toISOString().split('T')[0];
 };
 
 const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boolean = false): string => {
@@ -93,7 +94,7 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
     }
     
     // If using trial, first billing date starts after trial
-    if (useTrial && plan.has_trial) {
+    if (useTrial && plan.trial_days) {
       date.setDate(date.getDate() + plan.trial_days);
     }
     
@@ -133,7 +134,7 @@ const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = fal
     const date = new Date(startDate);
 
     // If using trial, subscription duration starts after trial
-    if (useTrial && plan.has_trial) {
+    if (useTrial && plan.trial_days) {
       date.setDate(date.getDate() + plan.trial_days);
     }
     
@@ -181,17 +182,12 @@ function SubscriptionsContent() {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [editSubscriptionData, setEditSubscriptionData] = useState<EditSubscriptionData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; title: string; message: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'AC' | 'PD' | 'CN' | 'TR' | 'EX'>('all');
   const [showDetails, setShowDetails] = useState<number | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingSubscriptionCreate, setPendingSubscriptionCreate] = useState<{
-    existingSubscription: Subscription | null;
-    newSubscriptionData: any;
-  } | null>(null);
+
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
@@ -241,7 +237,7 @@ function SubscriptionsContent() {
       setSubscriptions(response);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to load subscriptions. Please try again.'
@@ -255,7 +251,7 @@ function SubscriptionsContent() {
       setPaymentHistory(payments);
     } catch (error) {
       console.error('Error loading payment history:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to load payment history'
@@ -278,14 +274,14 @@ function SubscriptionsContent() {
           sub.id === subscriptionId ? updatedSubscription : sub
         )
       );
-      setNotification({
+      addNotification({
         type: 'success',
         title: 'Success',
         message: 'Trial converted to active subscription'
       });
     } catch (error) {
       console.error('Error converting trial:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to convert trial to active subscription'
@@ -337,7 +333,7 @@ function SubscriptionsContent() {
         )
       );
 
-      setNotification({
+      addNotification({
         type: 'success',
         title: 'Success',
         message: 'Subscription updated successfully'
@@ -348,7 +344,7 @@ function SubscriptionsContent() {
       setEditSubscriptionData(null);
     } catch (error) {
       console.error('Error updating subscription:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to update subscription'
@@ -364,29 +360,57 @@ function SubscriptionsContent() {
 
     try {
       setLoading(true);
-
-      // Check if customer has active subscription
-      const existingSubscription = subscriptions.find(
-        sub => sub.customer.id === formData.customer_id && sub.status === 'AC'
-      );
-
-      if (existingSubscription) {
-        setPendingSubscriptionCreate({
-          existingSubscription,
-          newSubscriptionData: { ...formData }
-        });
-        setShowConfirmModal(true);
-        return;
+      
+      // Validate form data
+      if (!formData.customer_id || !formData.plan_id || !formData.start_date) {
+        throw new Error('Please fill in all required fields');
       }
 
-      await createNewSubscription(formData);
+      const selectedPlan = plans.find(p => p.id === formData.plan_id);
+      if (!selectedPlan) {
+        throw new Error('Selected plan not found');
+      }
 
-    } catch (error) {
-      console.error('Error creating subscription:', error);
+      // Validate dates
+      const startDate = new Date(formData.start_date);
+      if (isNaN(startDate.getTime())) {
+        throw new Error('Invalid start date');
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (startDate < today) {
+        throw new Error('Start date cannot be in the past');
+      }
+
+      const endDate = calculateEndDate(formData.start_date, selectedPlan, formData.use_trial);
+      const trialEndDate = formData.use_trial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
+      const nextBillingDate = calculateNextBillingDate(formData.start_date, selectedPlan, formData.use_trial);
+      const initialStatus = formData.use_trial && selectedPlan.has_trial ? 'TR' : 'AC';
+
+      const newSubscription = await subscriptionService.createSubscription({
+        ...formData,
+        business: Number(businessId),
+        end_date: endDate,
+        trial_end: trialEndDate,
+        next_billing_date: nextBillingDate,
+        status: initialStatus
+      });
+
+      setSubscriptions(prev => [...prev, newSubscription]);
+      setShowAddSubscription(false);
+      resetFormData();
+      
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Subscription created successfully'
+      });
+    } catch (error: any) {
       addNotification({
         type: 'error',
         title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to create subscription'
+        message: error.response?.data?.detail || error.message || 'Failed to create subscription'
       });
     } finally {
       setLoading(false);
@@ -426,40 +450,13 @@ function SubscriptionsContent() {
     resetFormData();
   };
 
-  const handleConfirmSubscriptionCreate = async () => {
-    if (!pendingSubscriptionCreate?.existingSubscription) return;
 
-    try {
-      setLoading(true);
-      const { existingSubscription, newSubscriptionData } = pendingSubscriptionCreate;
-
-      // Cancel existing subscription
-      await subscriptionService.updateSubscription(existingSubscription.id, {
-        status: 'CN' as const,
-        end_date: new Date().toISOString().split('T')[0]
-      });
-
-      // Create new subscription
-      await createNewSubscription(newSubscriptionData);
-
-    } catch (error) {
-      console.error('Error handling subscription:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to handle subscription'
-      });
-    } finally {
-      setLoading(false);
-      setShowConfirmModal(false);
-      setPendingSubscriptionCreate(null);
-    }
-  };
 
   const handleEditSubscription = (subscription: Subscription) => {
     setEditSubscriptionData({
       start_date: subscription.start_date,
-      status: subscription.status
+      status: subscription.status,
+      customer_id: subscription.customer.id
     });
     setEditMode(true);
     setShowAddSubscription(true);
@@ -504,14 +501,14 @@ function SubscriptionsContent() {
       setLoading(true);
       await subscriptionService.cancelSubscription(subscriptionId);
       await loadSubscriptions();
-      setNotification({
+      addNotification({
         type: 'success',
         title: 'Success',
         message: 'Subscription cancelled successfully'
       });
     } catch (error) {
       console.error('Error cancelling subscription:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to cancel subscription'
@@ -527,7 +524,7 @@ function SubscriptionsContent() {
       setCustomers(response);
     } catch (error) {
       console.error('Error loading customers:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to load customers. Please try again.'
@@ -541,7 +538,7 @@ function SubscriptionsContent() {
       setPlans(response);
     } catch (error) {
       console.error('Error loading plans:', error);
-      setNotification({
+      addNotification({
         type: 'error',
         title: 'Error',
         message: 'Failed to load plans. Please try again.'
@@ -851,30 +848,39 @@ function SubscriptionsContent() {
             <form onSubmit={editMode ? handleUpdateSubscription : handleCreateSubscription} className="space-y-4">
               {!editMode && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Customer
+                  <label htmlFor="customer_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Customer *
                   </label>
                   <select
+                    id="customer_id"
+                    name="customer_id"
                     value={formData.customer_id || ''}
-                    onChange={(e) => setFormData({ ...formData, customer_id: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const customerId = Number(e.target.value);
+                      setFormData(prev => ({
+                        ...prev,
+                        customer_id: customerId
+                      }));
+                    }}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
                     required
                   >
                     <option value="">Select Customer</option>
                     {customers.map(customer => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.first_name} {customer.last_name} ({customer.email})
+                        {customer.name}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Plan
+                <label htmlFor="plan_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Plan *
                 </label>
                 <select
+                  id="plan_id"
+                  name="plan_id"
                   value={editMode ? (editSubscriptionData?.plan_id || editingSubscription?.plan.id) : formData.plan_id || ''}
                   onChange={(e) => {
                     const planId = Number(e.target.value);
@@ -895,7 +901,7 @@ function SubscriptionsContent() {
                         const startDate = formData.start_date;
                         const useTrial = selectedPlan.has_trial && formData.use_trial;
                         const endDate = calculateEndDate(startDate, selectedPlan, useTrial);
-                        const trialEndDate = useTrial ? calculateTrialEndDate(startDate, selectedPlan) : null;
+                        const trialEndDate = useTrial ? calculateTrialEndDate(startDate, selectedPlan) : undefined;
                         
                         setFormData(prev => ({
                           ...prev,
@@ -911,17 +917,27 @@ function SubscriptionsContent() {
                   required
                 >
                   <option value="">Select Plan</option>
-                  {plans.map(plan => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name} ({plan.price} / {plan.interval})
-                    </option>
-                  ))}
+                  {plans.map(plan => {
+                    const hasDiscount = plan.discounted_price && plan.discounted_price < plan.price;
+                    const priceDisplay = hasDiscount
+                      ? `${plan.name} - $${plan.discounted_price}/month (${Math.round((1 - plan.discounted_price/plan.price) * 100)}% off)`
+                      : `${plan.name} - $${plan.price}/month`;
+                    return (
+                      <option key={plan.id} value={plan.id}>
+                        {priceDisplay}
+                      </option>
+                    );
+                  })}
                 </select>
+                {formData.plan_id && plans.find(p => p.id === formData.plan_id)?.discounted_price && (
+                  <div className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    This plan is currently discounted!
+                  </div>
+                )}
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Start Date
+                <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Start Date *
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -929,33 +945,21 @@ function SubscriptionsContent() {
                   </div>
                   <input
                     type="date"
+                    id="start_date"
+                    name="start_date"
                     value={editMode ? editSubscriptionData?.start_date : formData.start_date}
                     onChange={(e) => {
                       const newStartDate = e.target.value;
-                      if (editMode) {
-                        const plan = plans.find(p => p.id === (editSubscriptionData?.plan_id || editingSubscription?.plan.id));
-                        if (plan) {
-                          const endDate = calculateEndDate(newStartDate, plan, editSubscriptionData?.use_trial);
-                          const trialEndDate = editSubscriptionData?.use_trial ? calculateTrialEndDate(newStartDate, plan) : null;
-                          setEditSubscriptionData(prev => ({
-                            ...prev!,
-                            start_date: newStartDate,
-                            end_date: endDate,
-                            trial_end: trialEndDate
-                          }));
-                        }
-                      } else {
-                        const plan = plans.find(p => p.id === formData.plan_id);
-                        if (plan) {
-                          const endDate = calculateEndDate(newStartDate, plan, formData.use_trial);
-                          const trialEndDate = formData.use_trial ? calculateTrialEndDate(newStartDate, plan) : null;
-                          setFormData(prev => ({
-                            ...prev,
-                            start_date: newStartDate,
-                            end_date: endDate,
-                            trial_end: trialEndDate
-                          }));
-                        }
+                      const selectedPlan = plans.find(p => p.id === formData.plan_id);
+                      if (selectedPlan) {
+                        const endDate = calculateEndDate(newStartDate, selectedPlan, formData.use_trial);
+                        const trialEndDate = formData.use_trial ? calculateTrialEndDate(newStartDate, selectedPlan) : undefined;
+                        setFormData(prev => ({
+                          ...prev,
+                          start_date: newStartDate,
+                          end_date: endDate,
+                          trial_end: trialEndDate
+                        }));
                       }
                     }}
                     className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
@@ -994,7 +998,7 @@ function SubscriptionsContent() {
                       const plan = plans.find(p => p.id === formData.plan_id);
                       if (plan) {
                         const endDate = calculateEndDate(formData.start_date, plan, useTrial);
-                        const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, plan) : null;
+                        const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, plan) : undefined;
                         setFormData(prev => ({
                           ...prev,
                           use_trial: useTrial,
@@ -1034,40 +1038,6 @@ function SubscriptionsContent() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Modal */}
-      {showConfirmModal && pendingSubscriptionCreate && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-gray-900 rounded-lg p-6 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-lg">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Confirm Subscription Change
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              This customer already has an active subscription. Would you like to cancel it and create a new one?
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setPendingSubscriptionCreate(null);
-                }}
-                className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSubscriptionCreate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : 'Confirm'}
-              </button>
-            </div>
           </div>
         </div>
       )}

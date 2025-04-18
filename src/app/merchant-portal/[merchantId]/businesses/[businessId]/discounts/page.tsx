@@ -1,7 +1,6 @@
 "use client";
 
-import { use } from 'react';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Form, InputField, SelectField, SubmitButton } from '@/components/ui/Form';
 import { useNotification } from '@/context/NotificationContext';
 import { FiPlus, FiEdit2, FiTrash2, FiLink } from 'react-icons/fi';
@@ -18,15 +17,12 @@ interface Discount {
   discount_type: 'P' | 'F';
   discount_value: string;
   discount_category: 'P' | 'D';
-  is_recurring: 'O' | 'R';
-  cycle_limit: string | null;
-  current_cycle: number;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S';
-  specific_plans: string[];
+  specific_plans?: string[];
   max_uses: string;
-  times_used: number;
+  times_used: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -55,13 +51,12 @@ interface AddDiscountParams {
   discount_type: 'P' | 'F';
   discount_value: string;
   discount_category: 'P' | 'D';
-  is_recurring: 'O' | 'R';
-  cycle_limit?: string;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S';
   specific_plans?: string[];
   max_uses: string;
+  is_active: boolean;
 }
 
 interface UpdateDiscountParams {
@@ -71,18 +66,17 @@ interface UpdateDiscountParams {
   discount_type: 'P' | 'F';
   discount_value: string;
   discount_category: 'P' | 'D';
-  is_recurring: 'O' | 'R';
-  cycle_limit: string | null;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S';
   specific_plans: string[];
   max_uses: string;
   business: string;
+  is_active: boolean;
 }
 
-export default function DiscountsPage({ params }: { params: { businessId: string } }) {
-  const businessId = params.businessId;
+export default function DiscountsPage({ params }: { params: Promise<{ businessId: string }> }) {
+  const { businessId } = use(params);
   
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [showAddDiscount, setShowAddDiscount] = useState(false);
@@ -97,20 +91,18 @@ export default function DiscountsPage({ params }: { params: { businessId: string
     discount_type: 'P',
     discount_value: '0',
     discount_category: 'P',
-    is_recurring: 'O',
-    cycle_limit: '',
     valid_from: new Date().toISOString(),
     valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     scope: 'A',
     specific_plans: [],
-    max_uses: '0',
+    max_uses: '1',
+    is_active: true,
   };
 
   const methods = useForm<AddDiscountParams>({
     defaultValues: selectedDiscount ? {
       ...defaultValues,
       ...selectedDiscount,
-      cycle_limit: selectedDiscount.cycle_limit || '',
       specific_plans: selectedDiscount.specific_plans || [],
     } : defaultValues,
   });
@@ -165,18 +157,17 @@ export default function DiscountsPage({ params }: { params: { businessId: string
         discount_type: data.discount_type,
         discount_value: data.discount_value,
         discount_category: data.discount_category,
-        is_recurring: data.is_recurring,
-        cycle_limit: data.cycle_limit || null,
         valid_from: data.valid_from,
         valid_until: data.valid_until,
         scope: data.scope,
         specific_plans: data.specific_plans || [],
         max_uses: data.max_uses,
         business: businessId,
+        is_active: data.is_active,
       };
 
       const updatedDiscount = await discountsService.update(id, updateData);
-      setDiscounts(prev => (prev?.map(d => d.id === id ? updatedDiscount : d) || []) as Discount[]);
+      setDiscounts(prev => prev.map(d => d.id === id ? updatedDiscount : d));
       addNotification({
         type: 'success',
         title: 'Success',
@@ -265,8 +256,6 @@ export default function DiscountsPage({ params }: { params: { businessId: string
       discount_type: discount.discount_type,
       discount_value: discount.discount_value,
       discount_category: discount.discount_category,
-      is_recurring: discount.is_recurring,
-      cycle_limit: discount.cycle_limit || '',
       valid_from: discount.valid_from,
       valid_until: discount.valid_until,
       scope: discount.scope,
@@ -309,14 +298,6 @@ export default function DiscountsPage({ params }: { params: { businessId: string
       accessorKey: 'discount_category',
       cell: ({ row }: { row: { original: Discount } }) => (
         <span>{row.original.discount_category === 'P' ? 'Promo' : 'Discount'}</span>
-      ),
-      size: 100,
-    },
-    {
-      header: 'Recurring',
-      accessorKey: 'is_recurring',
-      cell: ({ row }: { row: { original: Discount } }) => (
-        <span>{row.original.is_recurring === 'R' ? 'Yes' : 'One-time'}</span>
       ),
       size: 100,
     },
@@ -412,30 +393,39 @@ export default function DiscountsPage({ params }: { params: { businessId: string
         </button>
       </div>
 
-      {/* Add/Edit Discount Form */}
+      {/* Add/Edit Discount Modal */}
       {showAddDiscount && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            {selectedDiscount ? 'Edit Discount' : 'Add New Discount'}
-          </h2>
-          <Form<AddDiscountParams>
-            onSubmit={onSubmit}
-            defaultValues={methods.getValues()}
-            className="space-y-4"
-          >
-            {(formMethods) => (
-              <div className="space-y-4">
-                <InputField
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all dark:bg-gray-800 sm:my-8 sm:w-full sm:max-w-lg">
+              <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4 dark:bg-gray-800">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
+                      {selectedDiscount ? 'Edit Discount' : 'Add New Discount'}
+                    </h3>
+                    <Form<AddDiscountParams>
+                      onSubmit={onSubmit}
+                      defaultValues={methods.getValues()}
+                      className="space-y-4"
+                    >
+                      {(formMethods) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InputField
                   {...register('name', {
                     required: 'Name is required',
                     minLength: { value: 2, message: 'Name must be at least 2 characters' },
                     maxLength: { value: 100, message: 'Name must be less than 100 characters' },
+                    validate: (value) => {
+                      if (!value?.trim()) return 'Name cannot be empty';
+                      return true;
+                    }
                   })}
                   label="Name"
                   placeholder={selectedDiscount?.name || "Enter discount name"}
                   methods={formMethods}
                 />
-                <InputField
+                        <InputField
                   {...register('code', {
                     required: 'Code is required',
                     minLength: { value: 3, message: 'Code must be at least 3 characters' },
@@ -445,7 +435,7 @@ export default function DiscountsPage({ params }: { params: { businessId: string
                   placeholder={selectedDiscount?.code || "Enter discount code"}
                   methods={formMethods}
                 />
-                <SelectField
+                        <SelectField
                   {...register('discount_type', {
                     required: 'Discount type is required',
                   })}
@@ -456,7 +446,7 @@ export default function DiscountsPage({ params }: { params: { businessId: string
                   ]}
                   methods={formMethods}
                 />
-                <InputField
+                        <InputField
                   {...register('discount_value', {
                     required: 'Discount value is required',
                     pattern: { value: /^[0-9]+(\.[0-9]{1,2})?$/, message: 'Invalid discount value' },
@@ -467,41 +457,44 @@ export default function DiscountsPage({ params }: { params: { businessId: string
                   type="number"
                   methods={formMethods}
                 />
-                <SelectField
+                        <SelectField
                   {...register('discount_category', {
                     required: 'Discount category is required',
                   })}
                   label="Discount Category"
                   options={[
-                    { value: 'P', label: 'Product' },
+                    { value: 'P', label: 'Promo' },
                     { value: 'D', label: 'Discount' },
                   ]}
                   methods={formMethods}
                 />
-                <InputField
-                  {...register('cycle_limit', {
-                    validate: (value: string | undefined) => {
-                      if (!value) return true;
-                      const num = parseInt(value);
-                      return !isNaN(num) && num >= 0 || 'Please enter a valid non-negative integer';
-                    }
-                  } as any)}
-                  label="Cycle Limit"
-                  placeholder="Enter cycle limit"
-                  type="number"
+                        <SelectField
+                  {...register('is_active', {
+                    required: 'Status is required',
+                  })}
+                  label="Status"
+                  options={[
+                    { value: true, label: 'Active' },
+                    { value: false, label: 'Inactive' },
+                  ]}
                   methods={formMethods}
                 />
-                <div className="sm:col-span-2">
+                        <div>
                   <DatePicker
                     {...register('valid_from', {
                       required: 'Valid From is required',
+                      validate: (value) => {
+                        if (!value) return 'Valid From is required';
+                        if (new Date(value) < new Date()) return 'Valid From date must be in the future';
+                        return true;
+                      }
                     })}
                     label="Valid From"
                     methods={formMethods}
                     required
                   />
                 </div>
-                <div className="sm:col-span-2">
+                        <div>
                   <DatePicker
                     {...register('valid_until', {
                       required: 'Valid Until is required',
@@ -518,7 +511,7 @@ export default function DiscountsPage({ params }: { params: { businessId: string
                     required
                   />
                 </div>
-                <InputField
+                        <InputField
                   {...register('max_uses', {
                     required: 'Maximum uses is required',
                     pattern: { value: /^[0-9]+$/, message: 'Invalid number format' },
@@ -529,18 +522,32 @@ export default function DiscountsPage({ params }: { params: { businessId: string
                   type="number"
                   methods={formMethods}
                 />
-                <SubmitButton>
-                  {selectedDiscount ? 'Update Discount' : 'Add Discounts'}
-                </SubmitButton>
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddDiscount(false)}
+                            className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                          <SubmitButton className="inline-flex justify-center rounded-md border border-transparent bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-600">
+                            {selectedDiscount ? 'Update Discount' : 'Add Discount'}
+                          </SubmitButton>
+                        </div>
+                        </div>
+                      )}
+                    </Form>
+                  </div>
+                </div>
               </div>
-            )}
-          </Form>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Discounts Table */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
           Discounts List
         </h2>
         <div className="overflow-x-auto">
@@ -548,7 +555,7 @@ export default function DiscountsPage({ params }: { params: { businessId: string
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 {columns.map((column) => (
-                  <th key={column.header} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  <th key={column.header} className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                     {column.header}
                   </th>
                 ))}

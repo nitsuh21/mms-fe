@@ -9,9 +9,6 @@ export interface Discount {
   discount_type: 'P' | 'F'; // Percentage or Fixed Amount
   discount_value: string;
   discount_category: 'P' | 'D'; // Promo Code or Discount Code
-  is_recurring: 'O' | 'R'; // One-time or Recurring
-  cycle_limit?: string;
-  current_cycle: string;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S'; // All Plans or Specific Plans
@@ -31,8 +28,6 @@ export interface AddDiscountParams {
   discount_type: 'P' | 'F';
   discount_value: string;
   discount_category: 'P' | 'D';
-  is_recurring: 'O' | 'R';
-  cycle_limit?: string;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S';
@@ -47,8 +42,6 @@ export interface UpdateDiscountParams {
   discount_type?: 'P' | 'F';
   discount_value?: string;
   discount_category?: 'P' | 'D';
-  is_recurring?: 'O' | 'R';
-  cycle_limit?: string | null;
   valid_from?: string;
   valid_until?: string;
   scope?: 'A' | 'S';

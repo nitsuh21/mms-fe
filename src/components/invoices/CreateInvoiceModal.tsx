@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { FiX } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
+import { subscriptionService, Subscription as ApiSubscription } from '@/services/subscriptionService';
 import { CreateInvoiceData } from '@/types/invoice';
 
 interface CreateInvoiceModalProps {
@@ -18,6 +19,8 @@ export function CreateInvoiceModal({
   onClose,
   onRefresh
 }: CreateInvoiceModalProps) {
+  const [subscriptions, setSubscriptions] = useState<ApiSubscription[]>([]);
+  const [isLoadingSubscriptions, setIsLoadingSubscriptions] = useState(false);
   const [formData, setFormData] = useState<Partial<CreateInvoiceData>>({
     payment_method: 'MT',
     due_date: new Date().toISOString().split('T')[0]
@@ -25,16 +28,37 @@ export function CreateInvoiceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addNotification } = useNotification();
 
+  useEffect(() => {
+    const loadSubscriptions = async () => {
+      try {
+        setIsLoadingSubscriptions(true);
+        const response = await subscriptionService.getSubscriptions(businessId);
+        console.log("Subscriptions:", response)
+        setSubscriptions(response.filter(sub => sub.status === 'AC' || sub.status === 'TR'));
+      } catch (error) {
+        console.error('Error loading subscriptions:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load subscriptions'
+        });
+      } finally {
+        setIsLoadingSubscriptions(false);
+      }
+    };
+
+    if (isOpen) {
+      loadSubscriptions();
+    }
+  }, [businessId, isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       setIsSubmitting(true);
       
-      await invoiceService.createInvoice({
-        ...formData,
-        business: businessId
-      });
+      await invoiceService.createInvoice(formData);
       
       addNotification({
         type: 'success',
@@ -97,7 +121,15 @@ export function CreateInvoiceModal({
                   required
                 >
                   <option value="">Select Subscription</option>
-                  {/* TODO: Add subscription options */}
+                  {isLoadingSubscriptions ? (
+                    <option disabled>Loading subscriptions...</option>
+                  ) : (
+                    subscriptions.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.customer.first_name} {sub.customer.last_name} - {sub.plan.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               

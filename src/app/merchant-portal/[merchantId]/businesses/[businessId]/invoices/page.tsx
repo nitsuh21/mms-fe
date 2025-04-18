@@ -8,6 +8,7 @@ import { invoiceService } from '@/services/invoiceService';
 import { FiRefreshCw, FiPlus, FiDollarSign, FiCreditCard } from 'react-icons/fi';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { PaymentModal } from '@/components/invoices/PaymentModal';
+import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 
 export default function InvoicesPage() {
   const params = useParams() as { businessId: string; merchantId: string };
@@ -16,6 +17,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addNotification } = useNotification();
@@ -43,8 +45,8 @@ export default function InvoicesPage() {
     loadInvoices();
   };
 
-  const handleCreateInvoice = async () => {
-    // TODO: Implement invoice creation
+  const handleCreateInvoice = () => {
+    setShowCreateModal(true);
   };
 
   const handleOpenPaymentModal = (invoice: Invoice) => {
@@ -109,6 +111,13 @@ export default function InvoicesPage() {
           setSelectedInvoice(null);
           setShowPaymentModal(false);
         }}
+        onRefresh={handleRefresh}
+      />
+      
+      <CreateInvoiceModal
+        businessId={businessId}
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
         onRefresh={handleRefresh}
       />
     </div>

@@ -2,20 +2,18 @@ import api from "./api";
 
 export interface Discount {
   id: string;
-  business: string;
   name: string;
   code: string;
-  description: string;
+  description?: string;
   discount_type: 'P' | 'F';
-  discount_value: string;
+  discount_value: number;
   discount_category: 'P' | 'D';
-  is_recurring: 'O' | 'R';
-  cycle_limit?: string;
   valid_from: string;
   valid_until: string;
   scope: 'A' | 'S';
-  specific_plans?: string[];
-  max_uses: string;
+  specific_plans?: number[];
+  max_uses: number;
+  times_used: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -68,6 +66,7 @@ export interface Plan {
   interval: 'D' | 'W' | 'M' | 'Y';
   price: number;
   discounted_price: number;
+  has_trial: boolean;
   currency: string;
   trial_days: number;
   features: string;
@@ -84,6 +83,7 @@ export interface CreatePlanData {
   interval: 'D' | 'W' | 'M' | 'Y';
   price: number;
   discounted_price: number;
+  has_trial: boolean;
   currency: string;
   trial_days: number;
   features: string;
@@ -95,7 +95,7 @@ export interface UpdatePlanData {
   description?: string;
   price?: number;
   discounted_price?: number;
-  business?: string;
+  has_trial?: boolean;
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
   trial_days?: number;
