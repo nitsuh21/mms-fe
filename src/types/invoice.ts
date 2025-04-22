@@ -27,6 +27,8 @@ export interface Payment {
   invoice: number;
   amount: number;
   payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
+  payment_type: 'base' | 'penalty' | 'extra' | 'other';
+  reason: string;
   status: 'P' | 'C' | 'F' | 'R';
   reference_number?: string;
   created_at: string;
@@ -51,12 +53,16 @@ export interface CreatePaymentData {
   invoice: number;
   amount: number;
   payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
-  reference_number?: string;
+  reference_number: string;
+  payment_type: 'base' | 'penalty' | 'extra' | 'other';
+  reason?: string;
 }
 
 export interface UpdatePaymentData {
   amount?: number;
   payment_method?: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
+  payment_type?: 'base' | 'penalty' | 'extra' | 'other';
+  reason?: string;
   status?: 'P' | 'C' | 'F' | 'R';
   reference_number?: string;
 }

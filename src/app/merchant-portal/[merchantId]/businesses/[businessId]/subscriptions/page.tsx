@@ -8,6 +8,7 @@ import { XIcon } from '@/components/icons';
 import { useNotification } from '@/context/NotificationContext';
 import { FiCalendar } from 'react-icons/fi';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 
 interface Notification {
   type: 'success' | 'error';
@@ -23,7 +24,7 @@ interface Payment {
 }
 
 interface EditSubscriptionData {
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
   plan_id?: number;
   start_date?: string;
   end_date?: string;
@@ -47,7 +48,7 @@ const getStatusLabel = (status: string): string => {
     case 'EX':
       return 'Expired';
     default:
-      return 'Unknown';
+      return 'Pending';
   }
 };
 
@@ -56,7 +57,7 @@ const getStatusBadgeColor = (status: string): string => {
     case 'AC':
       return 'bg-green-100 text-green-800';
     case 'PE':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-blue-100 text-blue-800';  // Changed to blue to indicate pending review
     case 'PD':
       return 'bg-yellow-100 text-red-800';
     case 'CN':
@@ -66,36 +67,42 @@ const getStatusBadgeColor = (status: string): string => {
     case 'EX':
       return 'bg-gray-100 text-gray-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-blue-100 text-blue-800';
   }
 };
 
 const calculateTrialEndDate = (startDate: string, plan: Plan): string => {
-  if (!plan.has_trial || !startDate) return '';
+  if (!plan.has_trial || !plan.trial_days || !startDate) return '';
   
+  // Create a new date object from the start date
   const date = new Date(startDate);
   if (isNaN(date.getTime())) {
     throw new Error('Invalid start date format');
   }
   
-  if (!plan.trial_days || plan.trial_days <= 0) {
+  // Validate trial days
+  if (plan.trial_days <= 0) {
     throw new Error('Invalid trial days configuration');
   }
   
+  // Add trial days to get the trial end date
   date.setDate(date.getDate() + plan.trial_days);
+  
+  // Return in YYYY-MM-DD format
   return date.toISOString().split('T')[0];
 };
 
 const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boolean = false): string => {
   try {
+    // For trial subscriptions, next billing is at trial end
+    if (useTrial && plan.has_trial && plan.trial_days > 0) {
+      return calculateTrialEndDate(startDate, plan);
+    }
+    
+    // For non-trial subscriptions, calculate next billing based on interval
     const date = new Date(startDate);
     if (isNaN(date.getTime())) {
       throw new Error('Invalid start date');
-    }
-    
-    // If using trial, first billing date starts after trial
-    if (useTrial && plan.trial_days) {
-      date.setDate(date.getDate() + plan.trial_days);
     }
     
     const currentMonth = date.getMonth();
@@ -109,7 +116,7 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
         break;
       case 'M':
         date.setMonth(currentMonth + 1);
-        // Handle month overflow
+        // Handle month overflow (e.g., Jan 31 + 1 month should go to Feb 28/29)
         if (date.getMonth() !== ((currentMonth + 1) % 12)) {
           date.setDate(0);
         }
@@ -117,6 +124,8 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
       case 'Y':
         date.setFullYear(date.getFullYear() + 1);
         break;
+      default:
+        throw new Error('Invalid interval');
     }
     
     return date.toISOString().split('T')[0];
@@ -132,11 +141,6 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
 const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = false): string => {
   try {
     const date = new Date(startDate);
-
-    // If using trial, subscription duration starts after trial
-    if (useTrial && plan.trial_days) {
-      date.setDate(date.getDate() + plan.trial_days);
-    }
     
     // Add subscription duration based on interval
     switch (plan.interval) {
@@ -171,8 +175,10 @@ const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = fal
 };
 
 function SubscriptionsContent() {
-  const params = useParams();
-  const businessId = params?.businessId as string;
+  const params = useParams() as { businessId: string; merchantId: string } | null;
+  if (!params) {
+    return <div>Error: Missing parameters</div>;
+  }
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -191,7 +197,7 @@ function SubscriptionsContent() {
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
-    business: Number(businessId),
+    business: Number(params.businessId),
     plan_id: 0,
     customer_id: 0,
     start_date: new Date().toISOString().split('T')[0],
@@ -229,11 +235,11 @@ function SubscriptionsContent() {
     loadSubscriptions();
     loadCustomers();
     loadPlans();
-  }, [businessId]);
+  }, [params.businessId]);
 
   const loadSubscriptions = async () => {
     try {
-      const response = await subscriptionService.getSubscriptions(String(businessId));
+      const response = await subscriptionService.getSubscriptions(params.businessId);
       setSubscriptions(response);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
@@ -259,10 +265,8 @@ function SubscriptionsContent() {
     }
   };
 
-  const handleViewDetails = async (subscription: Subscription) => {
-    setSelectedSubscription(subscription);
-    setShowDetails(subscription.id);
-    await loadPaymentHistory(subscription.id);
+  const handleViewDetails = (subscription: Subscription) => {
+    window.location.href = `/merchant-portal/${params.merchantId}/businesses/${params.businessId}/subscriptions/${subscription.id}`;
   };
 
   const handleConvertTrial = async (subscriptionId: number) => {
@@ -293,61 +297,33 @@ function SubscriptionsContent() {
 
   const handleUpdateSubscription = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!editingSubscription || !editSubscriptionData) return;
 
     try {
       setLoading(true);
-
-      // Get current plan and new plan if changed
-      const currentPlan = editingSubscription.plan;
-      const newPlanId = editSubscriptionData.plan_id || currentPlan.id;
-      const selectedPlan = plans.find(p => p.id === newPlanId);
-      
-      if (!selectedPlan) {
-        throw new Error('Selected plan not found');
-      }
-
-      // Calculate new dates if plan changed or trial status changed
-      const startDate = editSubscriptionData.start_date || editingSubscription.start_date;
-      const endDate = calculateEndDate(startDate, selectedPlan, editSubscriptionData.use_trial);
-      const trialEndDate = editSubscriptionData.use_trial ? calculateTrialEndDate(startDate, selectedPlan) : null;
-      const nextBillingDate = calculateNextBillingDate(startDate, selectedPlan, editSubscriptionData.use_trial);
-
-      const updatedData = {
+      // Convert trial_end to undefined if it's null
+      const updateData = {
         ...editSubscriptionData,
-        business: Number(businessId),
-        end_date: endDate,
-        trial_end: trialEndDate,
-        next_billing_date: nextBillingDate,
-        plan_id: newPlanId
+        trial_end: editSubscriptionData.trial_end || undefined
       };
-
-      const updated = await subscriptionService.updateSubscription(
-        editingSubscription.id,
-        updatedData
-      );
-
-      setSubscriptions(prevSubscriptions =>
-        prevSubscriptions.map(sub =>
-          sub.id === editingSubscription.id ? updated : sub
-        )
-      );
-
-      addNotification({
-        type: 'success',
-        title: 'Success',
-        message: 'Subscription updated successfully'
-      });
-
+      await subscriptionService.updateSubscription(editingSubscription.id, updateData);
+      loadSubscriptions();
+      setShowAddSubscription(false);
       setEditMode(false);
       setEditingSubscription(null);
       setEditSubscriptionData(null);
-    } catch (error) {
-      console.error('Error updating subscription:', error);
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Subscription updated successfully',
+      });
+    } catch (err: any) {
+      console.error('Error updating subscription:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to update subscription'
+        message: err.message || 'Failed to update subscription',
       });
     } finally {
       setLoading(false);
@@ -383,18 +359,22 @@ function SubscriptionsContent() {
         throw new Error('Start date cannot be in the past');
       }
 
-      const endDate = calculateEndDate(formData.start_date, selectedPlan, formData.use_trial);
-      const trialEndDate = formData.use_trial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
-      const nextBillingDate = calculateNextBillingDate(formData.start_date, selectedPlan, formData.use_trial);
-      const initialStatus = formData.use_trial && selectedPlan.has_trial ? 'TR' : 'AC';
-
+      // Determine if we should use trial based on plan settings
+      const useTrial = selectedPlan.has_trial && selectedPlan.trial_days > 0;
+      
+      // Calculate dates
+      const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
+      const nextBillingDate = useTrial && trialEndDate ? trialEndDate : formData.start_date; // If trial, first billing is at trial end
+      const endDate = calculateEndDate(useTrial && trialEndDate ? trialEndDate : formData.start_date, selectedPlan, false); // End date starts after trial
+      
       const newSubscription = await subscriptionService.createSubscription({
         ...formData,
-        business: Number(businessId),
+        business: Number(params.businessId),
         end_date: endDate,
         trial_end: trialEndDate,
         next_billing_date: nextBillingDate,
-        status: initialStatus
+        status: useTrial ? 'TR' : 'AC', // Trial status if using trial
+        use_trial: useTrial
       });
 
       setSubscriptions(prev => [...prev, newSubscription]);
@@ -404,7 +384,9 @@ function SubscriptionsContent() {
       addNotification({
         type: 'success',
         title: 'Success',
-        message: 'Subscription created successfully'
+        message: useTrial
+          ? `Trial subscription created. Trial ends on ${new Date(trialEndDate!).toLocaleDateString()}`
+          : 'Subscription created successfully'
       });
     } catch (error: any) {
       addNotification({
@@ -428,11 +410,11 @@ function SubscriptionsContent() {
     const trialEndDate = data.use_trial ? calculateTrialEndDate(startDate, selectedPlan) : null;
     const nextBillingDate = calculateNextBillingDate(startDate, selectedPlan, data.use_trial);
     
-    const initialStatus = data.use_trial && selectedPlan.has_trial ? 'TR' : 'AC';
+    const initialStatus = 'PE';  // Always start with Pending status
 
     const newSubscription = await subscriptionService.createSubscription({
       ...data,
-      business: Number(businessId),
+      business: Number(params.businessId),
       end_date: endDate,
       trial_end: trialEndDate,
       next_billing_date: nextBillingDate,
@@ -493,25 +475,21 @@ function SubscriptionsContent() {
   };
 
   const handleCancelSubscription = async (subscriptionId: number) => {
-    if (!confirm('Are you sure you want to cancel this subscription?')) {
-      return;
-    }
-
     try {
       setLoading(true);
       await subscriptionService.cancelSubscription(subscriptionId);
-      await loadSubscriptions();
+      loadSubscriptions();
       addNotification({
         type: 'success',
         title: 'Success',
-        message: 'Subscription cancelled successfully'
+        message: 'Subscription cancelled successfully',
       });
-    } catch (error) {
-      console.error('Error cancelling subscription:', error);
+    } catch (err: any) {
+      console.error('Error cancelling subscription:', err);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to cancel subscription'
+        message: err.message || 'Failed to cancel subscription',
       });
     } finally {
       setLoading(false);
@@ -520,21 +498,21 @@ function SubscriptionsContent() {
 
   const loadCustomers = async () => {
     try {
-      const response = await customerService.getCustomers(String(businessId));
+      const response = await customerService.getCustomers();
       setCustomers(response);
     } catch (error) {
       console.error('Error loading customers:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to load customers. Please try again.'
+        message: 'Failed to load customers',
       });
     }
   };
 
   const loadPlans = async () => {
     try {
-      const response = await PlanService.getPlans(String(businessId));
+      const response = await PlanService.getPlans(params.businessId);
       setPlans(response);
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -547,10 +525,21 @@ function SubscriptionsContent() {
   };
 
   const handlePlanChange = (planId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      plan_id: planId
-    }));
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (selectedPlan) {
+      // If plan has trial, automatically enable it
+      const useTrial = selectedPlan.has_trial && selectedPlan.trial_days > 0;
+      const endDate = calculateEndDate(formData.start_date, selectedPlan, useTrial);
+      const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
+      
+      setFormData(prev => ({
+        ...prev,
+        plan_id: planId,
+        use_trial: useTrial,
+        end_date: endDate,
+        trial_end: trialEndDate
+      }));
+    }
   };
 
   const handleCustomerChange = (customerId: number) => {
@@ -562,7 +551,7 @@ function SubscriptionsContent() {
 
   const resetFormData = () => {
     setFormData({
-      business: Number(businessId),
+      business: Number(params.businessId),
       plan_id: 0,
       customer_id: 0,
       start_date: new Date().toISOString().split('T')[0],
@@ -673,35 +662,43 @@ function SubscriptionsContent() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {new Date(sub.end_date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleViewDetails(sub)}
-                        className="text-brand-500 hover:text-brand-700"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => handleEditSubscription(sub)}
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        Edit
-                      </button>
-                      {sub.status === 'TR' && (
-                        <button
-                          onClick={() => handleConvertTrial(sub.id)}
-                          className="text-green-500 hover:text-green-700"
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <Link
+                          href={`/merchant-portal/${params.merchantId}/businesses/${params.businessId}/subscriptions/${sub.id}`}
+                          className="text-brand-600 hover:text-brand-900"
                         >
-                          Convert to Active
-                        </button>
-                      )}
-                      {/* {sub.status !== 'CN' && (
+                          View Details
+                        </Link>
                         <button
-                          onClick={() => handleCancelSubscription(sub.id)}
-                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleEditSubscription(sub)}
+                          className="text-brand-600 hover:text-brand-900"
                         >
-                          Cancel
+                          Edit
                         </button>
-                      )} */}
+                        <button
+                          onClick={() => handleDeleteSubscription(sub.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                        {sub.status === 'CN' && (
+                          <button
+                            onClick={() => handleRenewSubscription(sub)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Renew
+                          </button>
+                        )}
+                        {sub.status === 'TR' && (
+                          <button
+                            onClick={() => handleConvertTrial(sub.id)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Convert to Active
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -868,7 +865,7 @@ function SubscriptionsContent() {
                     <option value="">Select Customer</option>
                     {customers.map(customer => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name}
+                        {`${customer.first_name} ${customer.last_name}`}
                       </option>
                     ))}
                   </select>
@@ -919,9 +916,13 @@ function SubscriptionsContent() {
                   <option value="">Select Plan</option>
                   {plans.map(plan => {
                     const hasDiscount = plan.discounted_price && plan.discounted_price < plan.price;
-                    const priceDisplay = hasDiscount
+                    const hasTrial = plan.has_trial && plan.trial_days > 0;
+                    let priceDisplay = hasDiscount
                       ? `${plan.name} - $${plan.discounted_price}/month (${Math.round((1 - plan.discounted_price/plan.price) * 100)}% off)`
                       : `${plan.name} - $${plan.price}/month`;
+                    if (hasTrial) {
+                      priceDisplay += ` • ${plan.trial_days} Days Trial`;
+                    }
                     return (
                       <option key={plan.id} value={plan.id}>
                         {priceDisplay}
@@ -929,9 +930,18 @@ function SubscriptionsContent() {
                     );
                   })}
                 </select>
-                {formData.plan_id && plans.find(p => p.id === formData.plan_id)?.discounted_price && (
-                  <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-                    This plan is currently discounted!
+                {formData.plan_id && (
+                  <div className="space-y-1 mt-1">
+                    {plans.find(p => p.id === formData.plan_id)?.discounted_price && (
+                      <div className="text-sm text-green-600 dark:text-green-400">
+                        This plan is currently discounted!
+                      </div>
+                    )}
+                    {plans.find(p => p.id === formData.plan_id)?.has_trial && (
+                      <div className="text-sm text-blue-600 dark:text-blue-400">
+                        This plan includes a {plans.find(p => p.id === formData.plan_id)?.trial_days}-day trial period!
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

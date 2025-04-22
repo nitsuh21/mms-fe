@@ -1,6 +1,5 @@
 import api from './api';
-import { Invoice, CreateInvoiceData, UpdateInvoiceData } from '@/types/invoice';
-import { Payment, CreatePaymentData, UpdatePaymentData } from '@/types/payment';
+import { Invoice, CreateInvoiceData, UpdateInvoiceData, Payment, CreatePaymentData, UpdatePaymentData } from '@/types/invoice';
 
 // Helper function to convert numeric fields
 const convertInvoice = (invoice: any): Invoice => ({
@@ -78,7 +77,7 @@ export const invoiceService = {
    */
   async createPayment(data: CreatePaymentData): Promise<Payment> {
     try {
-      const response = await api.post(`/subscriptions/invoices/${data.invoice}/payments/create/`, data);
+      const response = await api.post(`/subscriptions/invoices/${data.invoice}/payments/`, data);
       return response.data;
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -104,7 +103,7 @@ export const invoiceService = {
    */
   async getPayment(paymentId: number): Promise<Payment> {
     try {
-      const response = await api.get(`/subscriptions/invoices/payments/${paymentId}/`);
+      const response = await api.get(`/subscriptions/payments/${paymentId}/`);
       return response.data;
     } catch (error) {
       console.error('Error fetching payment:', error);
@@ -117,7 +116,7 @@ export const invoiceService = {
    */
   async updatePayment(paymentId: number, data: UpdatePaymentData): Promise<Payment> {
     try {
-      const response = await api.patch(`/subscriptions/invoices/payments/${paymentId}/`, data);
+      const response = await api.patch(`/subscriptions/payments/${paymentId}/`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating payment:', error);
@@ -130,7 +129,7 @@ export const invoiceService = {
    */
   async deletePayment(paymentId: number): Promise<void> {
     try {
-      await api.delete(`/subscriptions/invoices/payments/${paymentId}/`);
+      await api.delete(`/subscriptions/payments/${paymentId}/`);
     } catch (error) {
       console.error('Error deleting payment:', error);
       throw error;

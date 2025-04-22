@@ -4,7 +4,7 @@ import { FiDollarSign, FiList, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
 import { useState } from 'react';
-import { PaymentsList } from './PaymentsList';
+import { PaymentList } from './PaymentList';
 
 const statusColors = {
   P: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
@@ -123,13 +123,14 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
                       <FiList className="h-4 w-4" />
                     )}
                   </button>
-                  {/* <button
+                  <button
                     onClick={() => onOpenPaymentModal(invoice)}
                     className="ml-2 text-green-600 hover:text-green-900"
-                    title="Make Payment"
+                    title="Add Payment"
+                    disabled={invoice.status === 'C'}
                   >
                     <FiDollarSign className="h-4 w-4" />
-                  </button> */}
+                  </button>
                   <button
                     onClick={() => handleDeleteInvoice(invoice.id)}
                     className="ml-2 text-red-600 hover:text-red-900"
@@ -142,7 +143,7 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
               {expandedInvoices.has(invoice.id) && (
                 <tr>
                   <td colSpan={6} className="p-4">
-                    <PaymentsList invoiceId={invoice.id} onRefresh={onRefresh} />
+                    <PaymentList invoiceId={invoice.id} />
                   </td>
                 </tr>
               )}

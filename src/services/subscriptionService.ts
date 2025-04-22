@@ -1,4 +1,5 @@
 import api from "./api";
+import { Invoice } from '@/types/invoice';
 
 export interface Subscription {
   id: number;
@@ -29,7 +30,7 @@ export interface Subscription {
     created_at: string;
     updated_at: string;
   };
-  status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
   start_date: string;
   end_date: string;
   trial_end: string | null;
@@ -44,13 +45,14 @@ export interface CreateSubscriptionData {
   customer_id: number;
   start_date: string;
   end_date?: string;
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
   trial_end?: string;
   next_billing_date: string;
+  use_trial?: boolean;
 }
 
 export interface UpdateSubscriptionData {
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
   start_date?: string;
   end_date?: string;
   trial_end?: string;
@@ -205,6 +207,17 @@ export class SubscriptionService {
       return response.data.results;
     } catch (error) {
       console.error('Error fetching payment history:', error);
+      throw error;
+    }
+  }
+
+  // Get invoices for a subscription
+  async getSubscriptionInvoices(subscriptionId: number): Promise<Invoice[]> {
+    try {
+      const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/invoices/`);
+      return response.data.results;
+    } catch (error) {
+      console.error('Error fetching subscription invoices:', error);
       throw error;
     }
   }

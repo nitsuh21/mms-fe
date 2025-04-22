@@ -32,6 +32,7 @@ interface PlanFormData {
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
   trial_days?: number;
+  has_trial?: boolean;
   features?: string;
   is_active?: boolean | string;
 }
@@ -74,6 +75,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
           price: Number(data.price),
           discounted_price: Number(data.discounted_price), 
           trial_days: Number(data.trial_days),
+          has_trial: data.trial_days ? data.trial_days > 0 : false,
           is_active: typeof data.is_active === 'string' ? data.is_active === 'true' : data.is_active
         },
         errors: {}
@@ -275,6 +277,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
       const price = Number(data.price) || 0;
       
+      const trialDays = Number(data.trial_days) || 0;
       const planData = {
         business: businessId,
         name: data.name || '',
@@ -283,7 +286,8 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         price: price,
         discounted_price: selectedPlan ? (Number(data.discounted_price) || price) : price, // Always use price as fallback
         currency: 'ETB',
-        trial_days: Number(data.trial_days) || 0,
+        trial_days: trialDays,
+        has_trial: trialDays > 0,
         features: features,
         is_active: data.is_active === 'true' || data.is_active === true
       };
@@ -673,6 +677,13 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                 >
                   {plan.is_active ? 'Active' : 'Inactive'}
                 </span>
+                {plan.has_trial && (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {plan.trial_days} Days Trial
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">

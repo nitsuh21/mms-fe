@@ -79,13 +79,7 @@ export default function InvoicesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Invoices</h1>
         <div className="flex gap-2">
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 rounded-lg border border-transparent bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-          >
-            <FiRefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
+
           <button
             onClick={handleCreateInvoice}
             className="flex items-center gap-2 rounded-lg border border-transparent bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
