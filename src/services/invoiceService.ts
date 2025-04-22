@@ -21,6 +21,17 @@ export const invoiceService = {
     }
   },
 
+  async getSubscriptionInvoices(subscriptionId: number): Promise<Invoice[]> {
+    try {
+      const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/invoices/`);
+      const invoices = response.data.results || [];
+      return invoices.map(convertInvoice);
+    } catch (error) {
+      console.error('Error fetching subscription invoices:', error);
+      throw error;
+    }
+  },
+
   async getInvoice(id: number): Promise<Invoice> {
     try {
       const response = await api.get(`/subscriptions/invoices/${id}/`);
@@ -129,7 +140,7 @@ export const invoiceService = {
    */
   async deletePayment(paymentId: number): Promise<void> {
     try {
-      await api.delete(`/subscriptions/payments/${paymentId}/`);
+      await api.delete(`/subscriptions/invoices/payments/${paymentId}/`);
     } catch (error) {
       console.error('Error deleting payment:', error);
       throw error;

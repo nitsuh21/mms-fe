@@ -211,11 +211,29 @@ export class SubscriptionService {
     }
   }
 
+  // Helper function to convert invoice numeric fields
+  private convertInvoice(invoice: Record<string, any>): Invoice {
+    return {
+      ...invoice,
+      id: invoice.id,
+      subscription: invoice.subscription,
+      payment_method: invoice.payment_method,
+      status: invoice.status,
+      due_date: invoice.due_date,
+      amount: typeof invoice.amount === 'number' ? invoice.amount : parseFloat(invoice.amount || '0'),
+      remaining_balance: typeof invoice.remaining_balance === 'number' ? invoice.remaining_balance : parseFloat(invoice.remaining_balance || '0'),
+      total_paid: typeof invoice.total_paid === 'number' ? invoice.total_paid : parseFloat(invoice.total_paid || '0'),
+      created_at: invoice.created_at || new Date().toISOString(),
+      updated_at: invoice.updated_at || new Date().toISOString()
+    };
+  }
+
   // Get invoices for a subscription
   async getSubscriptionInvoices(subscriptionId: number): Promise<Invoice[]> {
     try {
       const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/invoices/`);
-      return response.data.results;
+      const invoices = response.data.results || [];
+      return invoices.map(invoice => this.convertInvoice(invoice));
     } catch (error) {
       console.error('Error fetching subscription invoices:', error);
       throw error;

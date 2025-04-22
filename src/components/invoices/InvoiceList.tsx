@@ -3,7 +3,7 @@ import { Invoice } from '@/types/invoice';
 import { FiDollarSign, FiList, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PaymentList } from './PaymentList';
 
 const statusColors = {
@@ -23,6 +23,26 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
   const { addNotification } = useNotification();
   const [isLoading, setIsLoading] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
+  const [invoicePayments, setInvoicePayments] = useState<{ [key: number]: number }>({});
+
+  useEffect(() => {
+    const loadAllPayments = async () => {
+      const payments: { [key: number]: number } = {};
+      for (const invoice of invoices) {
+        try {
+          const invoicePayments = await invoiceService.getPayments(invoice.id);
+          payments[invoice.id] = invoicePayments.reduce((sum, payment) => 
+            sum + parseFloat(payment.amount.toString()), 0);
+        } catch (err) {
+          console.error(`Error loading payments for invoice ${invoice.id}:`, err);
+          payments[invoice.id] = 0;
+        }
+      }
+      setInvoicePayments(payments);
+    };
+
+    loadAllPayments();
+  }, [invoices]);
 
   const handleDeleteInvoice = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this invoice?')) {
@@ -75,6 +95,9 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
               Amount
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Paid Amount
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
               Status
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -102,6 +125,9 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
                       ({invoice.remaining_balance.toFixed(2)} remaining)
                     </span>
                   )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  ${(invoicePayments[invoice.id] || 0).toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[invoice.status as keyof typeof statusColors]?.color || 'bg-gray-100 text-gray-800'}`}>
@@ -142,8 +168,26 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
               </tr>
               {expandedInvoices.has(invoice.id) && (
                 <tr>
-                  <td colSpan={6} className="p-4">
-                    <PaymentList invoiceId={invoice.id} />
+                  <td colSpan={7} className="p-4">
+                    <PaymentList 
+                      invoiceId={invoice.id}
+                      onPaymentUpdate={() => {
+                        // Refresh payments for this invoice
+                        const loadInvoicePayments = async () => {
+                          try {
+                            const payments = await invoiceService.getPayments(invoice.id);
+                            setInvoicePayments(prev => ({
+                              ...prev,
+                              [invoice.id]: payments.reduce((sum, payment) => 
+                                sum + parseFloat(payment.amount.toString()), 0)
+                            }));
+                          } catch (err) {
+                            console.error(`Error reloading payments for invoice ${invoice.id}:`, err);
+                          }
+                        };
+                        loadInvoicePayments();
+                      }} 
+                    />
                   </td>
                 </tr>
               )}

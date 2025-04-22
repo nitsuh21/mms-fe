@@ -1,29 +1,33 @@
 import { useState, useEffect } from 'react';
 import { invoiceService } from '@/services/invoiceService';
 import { Payment } from '@/types/invoice';
-import { FiDollarSign } from 'react-icons/fi';
+import { FiDollarSign, FiTrash2 } from 'react-icons/fi';
+import { useNotification } from '@/context/NotificationContext';
 
 interface PaymentListProps {
   invoiceId: number;
+  onPaymentUpdate?: () => void;
 }
 
-export function PaymentList({ invoiceId }: PaymentListProps) {
+export function PaymentList({ invoiceId, onPaymentUpdate }: PaymentListProps) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeletingPayment, setIsDeletingPayment] = useState(false);
+  const { addNotification } = useNotification();
+
+  const loadPayments = async () => {
+    try {
+      setIsLoading(true);
+      const response = await invoiceService.getPayments(invoiceId);
+      setPayments(response || []);
+    } catch (err) {
+      console.error('Error loading payments:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadPayments = async () => {
-      try {
-        setIsLoading(true);
-        const response = await invoiceService.getPayments(invoiceId);
-        setPayments(response || []);
-      } catch (err) {
-        console.error('Error loading payments:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadPayments();
   }, [invoiceId]);
 
@@ -81,6 +85,9 @@ export function PaymentList({ invoiceId }: PaymentListProps) {
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Reference
             </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -103,6 +110,40 @@ export function PaymentList({ invoiceId }: PaymentListProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                 {payment.reference_number || '-'}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this payment?')) {
+                      try {
+                        setIsDeletingPayment(true);
+                        await invoiceService.deletePayment(payment.id);
+                        addNotification({
+                          type: 'success',
+                          title: 'Success',
+                          message: 'Payment deleted successfully'
+                        });
+                        await loadPayments();
+                        if (onPaymentUpdate) {
+                          onPaymentUpdate();
+                        }
+                      } catch (error: any) {
+                        addNotification({
+                          type: 'error',
+                          title: 'Error',
+                          message: error.message || 'Failed to delete payment'
+                        });
+                      } finally {
+                        setIsDeletingPayment(false);
+                      }
+                    }
+                  }}
+                  disabled={isDeletingPayment}
+                  className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                  title="Delete Payment"
+                >
+                  <FiTrash2 className="h-4 w-4" />
+                </button>
               </td>
             </tr>
           ))}
