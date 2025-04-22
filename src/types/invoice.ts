@@ -9,6 +9,8 @@ export interface Invoice {
       email: string;
     };
   };
+  customer_name: string;
+  customer_email: string;
   amount: number;
   payment_method: 'MT' | 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
   status: 'P' | 'C' | 'O' | 'PA';

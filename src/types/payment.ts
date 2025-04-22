@@ -1,8 +1,12 @@
+export type PaymentType = 'REG' | 'DEP' | 'REF' | 'ADJ' | 'OTH';
+
 export interface Payment {
   id: number;
   invoice: number;
   amount: number;
   payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG'; // Cash, Telebirr, CBE, Coop, Payment Aggregator
+  payment_type: PaymentType;
+  reason?: string;
   status: 'P' | 'C' | 'F' | 'R'; // Pending, Completed, Failed, Refunded
   reference_number?: string;
   created_at: string;
@@ -13,7 +17,9 @@ export interface CreatePaymentData {
   invoice: number;
   amount: number;
   payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
-  reference_number?: string;
+  payment_type: PaymentType;
+  reason?: string;
+  reference_number: string;
 }
 
 export interface UpdatePaymentData {

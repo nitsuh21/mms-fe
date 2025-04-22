@@ -1,13 +1,6 @@
-import { Invoice, CreatePaymentData } from '@/types/invoice';
+import { Invoice } from '@/types/invoice';
+import { CreatePaymentData, PaymentType } from '@/types/payment';
 
-type PaymentFormData = {
-  invoice: number;
-  amount: number;
-  payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
-  payment_type: 'base' | 'penalty' | 'extra' | 'other';
-  reason: string;
-  reference_number: string;
-};
 import { FiDollarSign, FiCreditCard } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
@@ -23,10 +16,11 @@ const paymentMethods = [
 ] as const;
 
 const paymentTypes = [
-  { value: 'base', label: 'Base Payment' },
-  { value: 'penalty', label: 'Penalty' },
-  { value: 'extra', label: 'Extra' },
-  { value: 'other', label: 'Other' },
+  { value: 'REG', label: 'Regular Payment' },
+  { value: 'DEP', label: 'Deposit' },
+  { value: 'REF', label: 'Refund' },
+  { value: 'ADJ', label: 'Adjustment' },
+  { value: 'OTH', label: 'Other' },
 ] as const;
 
 interface PaymentModalProps {
@@ -39,15 +33,15 @@ interface PaymentModalProps {
 export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentModalProps) {
   const { addNotification } = useNotification();
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof PaymentFormData, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CreatePaymentData, string>>>({});
   // Initialize payment data with amount as 0
-  const [paymentData, setPaymentData] = useState<PaymentFormData>({
+  const [paymentData, setPaymentData] = useState<CreatePaymentData>({
     invoice: 0,
     amount: 0,
     payment_method: 'CA',
-    payment_type: 'base',
+    payment_type: 'REG' as PaymentType,
     reason: '',
-    reference_number: '',
+    reference_number: '',  // Empty string as default
   });
 
   const validateForm = (): boolean => {
@@ -107,24 +101,30 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
         invoice: 0,
         amount: 0,
         payment_method: 'CA',
-        payment_type: 'base',
+        payment_type: 'base' as PaymentType,
         reason: '',
         reference_number: '',
       });
       setErrors({});
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating payment:', err);
       let errorMessage = 'Failed to process payment';
       
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === 'object' && 'response' in err) {
-        const response = (err as any).response;
-        if (response?.data?.detail) {
-          errorMessage = response.data.detail;
-        } else if (response?.data?.message) {
-          errorMessage = response.data.message;
+      if (err.response?.data) {
+        // Handle validation errors
+        if (err.response.data.amount) {
+          errorMessage = err.response.data.amount[0];
+        } else if (err.response.data.detail) {
+          errorMessage = err.response.data.detail;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.non_field_errors) {
+          errorMessage = err.response.data.non_field_errors[0];
+        } else if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
         }
+      } else if (err.message) {
+        errorMessage = err.message;
       }
 
       addNotification({
@@ -132,9 +132,28 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
         title: 'Payment Error',
         message: errorMessage,
       });
+
+      // Set field-specific errors if they exist
+      if (err.response?.data) {
+        const newErrors: Record<string, string> = {};
+        Object.entries(err.response.data).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            newErrors[key] = value[0];
+          } else if (typeof value === 'string') {
+            newErrors[key] = value;
+          }
+        });
+        setErrors(newErrors);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setPaymentData(prev => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
   if (!isOpen || !invoice) return null;
@@ -196,26 +215,16 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
             </label>
             <select
               value={paymentData.payment_method}
-              onChange={(e) => {
-                const method = e.target.value as CreatePaymentData['payment_method'];
-                setPaymentData(prev => ({
-                  ...prev,
-                  payment_method: method,
-                  // Clear reference number when switching away from Telebirr
-                  reference_number: method === 'TB' ? prev.reference_number : ''
-                }));
-                setErrors(prev => {
-                  const { reference_number, ...rest } = prev;
-                  return rest;
-                });
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+              onChange={handleInputChange}
+              name="payment_method"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
             >
-              {paymentMethods.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
+              <option value="MT">Manual Transfer</option>
+              <option value="CA">Cash</option>
+              <option value="TB">TeleBirr</option>
+              <option value="CB">CBE Birr</option>
+              <option value="CP">Commercial Bank</option>
+              <option value="AG">Amole/Geta</option>
             </select>
           </div>
           <div>
@@ -224,36 +233,23 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
             </label>
             <select
               value={paymentData.payment_type}
-              onChange={(e) => {
-                const payment_type = e.target.value as CreatePaymentData['payment_type'];
-                setPaymentData({ ...paymentData, payment_type });
-                setErrors(prev => {
-                  const { payment_type, ...rest } = prev;
-                  return rest;
-                });
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+              onChange={handleInputChange}
+              name="payment_type"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
             >
               {paymentTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
+                <option key={type.value} value={type.value}>{type.label}</option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Reason <span className="text-red-500">*</span>
+              Reason/Notes
             </label>
             <textarea
+              name="reason"
               value={paymentData.reason}
-              onChange={(e) => {
-                setPaymentData({ ...paymentData, reason: e.target.value });
-                setErrors(prev => {
-                  const { reason, ...rest } = prev;
-                  return rest;
-                });
-              }}
+              onChange={handleInputChange}
               placeholder="Enter reason for payment"
               className={`mt-1 block w-full rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 ${errors.reason ? 'border-red-300' : 'border-gray-300'}`}
               rows={3}

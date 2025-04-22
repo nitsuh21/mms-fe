@@ -116,7 +116,8 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
                   #{invoice.id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                  {invoice.subscription?.customer?.first_name} {invoice.subscription?.customer?.last_name}
+                  <div>{invoice.customer_name}</div>
+                  <div className="text-xs text-gray-400">{invoice.customer_email}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                   ${invoice.amount.toFixed(2)}
@@ -153,7 +154,6 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
                     onClick={() => onOpenPaymentModal(invoice)}
                     className="ml-2 text-green-600 hover:text-green-900"
                     title="Add Payment"
-                    disabled={invoice.status === 'C'}
                   >
                     <FiDollarSign className="h-4 w-4" />
                   </button>
