@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from 'react';
-import { Form, InputField, SelectField, CheckboxField, SubmitButton } from '@/components/ui/Form';
+import { useState, useEffect, use } from 'react';
 import { useNotification } from '@/context/NotificationContext';
 import { FiSave } from 'react-icons/fi';
+import { businessService } from '@/services/businessService';
+import { useForm } from 'react-hook-form';
+import type { Business } from '@/types/business';
+import { Form, InputField, SelectField, CheckboxField, SubmitButton } from '@/components/ui/Form';
 
-interface BusinessSettings {
+interface BusinessSettingsForm {
   // Business Info
   name: string;
   email: string;
@@ -13,23 +16,19 @@ interface BusinessSettings {
   address: string;
   timezone: string;
   currency: string;
-
-  // Visibility Settings
-  isVisibleInSearch: boolean;
   category: string;
-  coverImage: string;
+  isVisibleInSearch: boolean;
   shortDescription: string;
-  websiteUrl?: string;
-  instagramUrl?: string;
-
-  // Notification Settings
+  websiteUrl: string;
+  instagramUrl: string;
+  coverImage: string;
+  // Notifications
   notifyNewMembers: boolean;
   notifyExpiringSubscriptions: boolean;
   notifyFailedPayments: boolean;
   emailNotifications: boolean;
   smsNotifications: boolean;
-
-  // Billing Settings
+  // Billing
   allowAutoRenew: boolean;
   gracePeriodDays: number;
   sendPaymentReminders: boolean;
@@ -37,74 +36,77 @@ interface BusinessSettings {
   allowPartialPayments: boolean;
 }
 
-// Mock data - replace with API call
-const mockSettings: BusinessSettings = {
-  name: 'Fitness Studio',
-  email: 'contact@fitnessstudio.com',
-  phone: '+1 (555) 123-4567',
-  address: '123 Main St, City, State 12345',
-  timezone: 'America/New_York',
-  currency: 'ETB',
-  isVisibleInSearch: true,
-  category: 'Fitness',
-  coverImage: '',
-  shortDescription: 'Premier fitness studio offering personalized training and group classes',
-  websiteUrl: 'https://fitnessstudio.com',
-  instagramUrl: 'https://instagram.com/fitnessstudio',
-  notifyNewMembers: true,
-  notifyExpiringSubscriptions: true,
-  notifyFailedPayments: true,
-  emailNotifications: true,
-  smsNotifications: false,
-  allowAutoRenew: true,
-  gracePeriodDays: 7,
-  sendPaymentReminders: true,
-  reminderDaysBefore: 3,
-  allowPartialPayments: false,
-};
-
-const timezones = [
-  { value: 'America/New_York', label: 'Eastern Time (ET)' },
-  { value: 'America/Chicago', label: 'Central Time (CT)' },
-  { value: 'America/Denver', label: 'Mountain Time (MT)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-  { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
-  { value: 'Pacific/Honolulu', label: 'Hawaii Time (HT)' },
-];
-
-const currencies = [
-  { value: 'ETB', label: 'Ethiopian Birr (ETB)' },
-  { value: 'USD', label: 'US Dollar ($)' },
-  { value: 'EUR', label: 'Euro (€)' },
-  { value: 'GBP', label: 'British Pound (£)' },
-  { value: 'CAD', label: 'Canadian Dollar (C$)' },
-  { value: 'AUD', label: 'Australian Dollar (A$)' },
-];
-
-const businessCategories = [
-  { value: 'Fitness', label: 'Fitness' },
-  { value: 'Beauty', label: 'Beauty' },
-  { value: 'Health', label: 'Health' },
-  { value: 'Coaching', label: 'Coaching' },
-  { value: 'Wellness', label: 'Wellness' },
-  { value: 'Yoga', label: 'Yoga' },
-  { value: 'Spa', label: 'Spa' },
-  { value: 'Other', label: 'Other' },
-];
-
 export default function SettingsPage({ params }: { params: { businessId: string } }) {
+  const unwrappedParams = use(params as unknown as Promise<{ businessId: string }>);
+  const businessId = unwrappedParams.businessId;
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
   const { addNotification } = useNotification();
 
-  const handleSaveSettings = async (data: BusinessSettings) => {
-    // Replace with API call
-    console.log('Saving settings:', data);
-    addNotification({
-      type: 'success',
-      title: 'Settings Updated',
-      message: 'Your business settings have been successfully updated.',
-    });
+  const handleSubmit = async (data: BusinessSettingsForm) => {
+    try {
+      setIsLoading(true);
+      
+      // Convert form data to business update format
+      const businessData = {
+        name: data.name,
+        contact_email: data.email,
+        contact_phone: data.phone,
+        address: data.address,
+        timezone: data.timezone,
+        currency: data.currency,
+        is_visible_in_search: data.isVisibleInSearch,
+        category: data.category,
+        logo: data.coverImage,
+        short_description: data.shortDescription,
+        website_url: data.websiteUrl,
+        instagram_url: data.instagramUrl,
+      };
+
+      await businessService.updateBusiness(Number(businessId), businessData);
+      
+      // Refresh the business data
+      await loadBusiness();
+
+      addNotification({
+        type: 'success',
+        message: 'Business settings updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error updating business:', error);
+      addNotification({
+        type: 'error',
+        message: 'Failed to update business settings. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadBusiness();
+  }, [businessId]);
+
+  const loadBusiness = async () => {
+    try {
+      setIsLoading(true);
+      const business = await businessService.getBusiness(Number(businessId));
+      setBusiness(business);
+    } catch (error) {
+      console.error('Error loading business:', error);
+      addNotification({
+        type: 'error',
+        message: 'Failed to load business settings. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -163,16 +165,38 @@ export default function SettingsPage({ params }: { params: { businessId: string 
 
       {/* Settings Form */}
       <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <Form<BusinessSettings>
-          onSubmit={handleSaveSettings}
-          defaultValues={mockSettings}
-          className="space-y-6 p-6"
+        <Form 
+          onSubmit={handleSubmit}
+          defaultValues={{
+            name: business?.name || '',
+            email: business?.contact_email || '',
+            phone: business?.contact_phone || '',
+            address: business?.address || '',
+            timezone: business?.timezone || 'UTC',
+            currency: business?.currency || 'ETB',
+            category: business?.category || '',
+            isVisibleInSearch: business?.is_visible_in_search || false,
+            shortDescription: business?.short_description || '',
+            websiteUrl: business?.website_url || '',
+            instagramUrl: business?.instagram_url || '',
+            coverImage: business?.logo || '',
+            notifyNewMembers: true,
+            notifyExpiringSubscriptions: true,
+            notifyFailedPayments: true,
+            emailNotifications: true,
+            smsNotifications: true,
+            allowAutoRenew: true,
+            gracePeriodDays: 7,
+            sendPaymentReminders: true,
+            reminderDaysBefore: 3,
+            allowPartialPayments: false,
+          }}
         >
           {(methods) => (
             <>
               {/* General Settings */}
               {activeTab === 'general' && (
-                <div className="space-y-6">
+                <div className="space-y-6 p-6">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">Business Info</h2>
                   <div className="space-y-4">
                     <InputField
@@ -205,16 +229,38 @@ export default function SettingsPage({ params }: { params: { businessId: string 
                       methods={methods}
                     />
                     <SelectField
+                      name="category"
+                      label="Business Category"
+                      options={[
+                        { value: 'Beauty', label: 'Beauty' },
+                        { value: 'Fitness', label: 'Fitness' },
+                        { value: 'Wellness', label: 'Wellness' },
+                        { value: 'Yoga', label: 'Yoga' },
+                        { value: 'Spa', label: 'Spa' },
+                        { value: 'Other', label: 'Other' },
+                      ]}
+                      rules={{ required: 'Business category is required' }}
+                      methods={methods}
+                    />
+                    <SelectField
                       name="timezone"
                       label="Timezone"
-                      options={timezones}
+                      options={[
+                        { value: 'UTC', label: 'UTC' },
+                        { value: 'ET', label: 'Africa/Addis Ababa' },
+                        // Add more timezones as needed
+                      ]}
                       rules={{ required: 'Timezone is required' }}
                       methods={methods}
                     />
                     <SelectField
                       name="currency"
                       label="Currency"
-                      options={currencies}
+                      options={[
+                        { value: 'ETB', label: 'ETB' },
+                        { value: 'USD', label: 'USD' },
+                        // Add more currencies as needed
+                      ]}
                       rules={{ required: 'Currency is required' }}
                       methods={methods}
                     />
@@ -222,21 +268,15 @@ export default function SettingsPage({ params }: { params: { businessId: string 
                 </div>
               )}
 
+              {/* Visibility Settings */}
               {activeTab === 'visibility' && (
-                <div className="space-y-6">
+                <div className="space-y-6 p-6">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">Customer App Visibility</h2>
                   <div className="space-y-4">
                     <CheckboxField
                       name="isVisibleInSearch"
                       label="Visible in customer app search"
                       description="Allow customers to find your business in the app"
-                      methods={methods}
-                    />
-                    <SelectField
-                      name="category"
-                      label="Business Category"
-                      options={businessCategories}
-                      rules={{ required: 'Business category is required' }}
                       methods={methods}
                     />
                     <InputField
@@ -273,8 +313,9 @@ export default function SettingsPage({ params }: { params: { businessId: string 
                 </div>
               )}
 
+              {/* Notifications Settings */}
               {activeTab === 'notifications' && (
-                <div className="space-y-6">
+                <div className="space-y-6 p-6">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">Notification Preferences</h2>
                   <div className="space-y-4">
                     <div className="space-y-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
@@ -321,8 +362,9 @@ export default function SettingsPage({ params }: { params: { businessId: string 
                 </div>
               )}
 
+              {/* Billing Settings */}
               {activeTab === 'billing' && (
-                <div className="space-y-6">
+                <div className="space-y-6 p-6">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">Billing Settings</h2>
                   <div className="space-y-4">
                     <div className="space-y-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
@@ -380,8 +422,6 @@ export default function SettingsPage({ params }: { params: { businessId: string 
                   </div>
                 </div>
               )}
-
-
 
               <div className="flex justify-end border-t border-gray-200 pt-6 dark:border-gray-700">
                 <SubmitButton>

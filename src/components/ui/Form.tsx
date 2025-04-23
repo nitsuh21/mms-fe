@@ -34,6 +34,7 @@ interface InputFieldProps<TFormValues extends FieldValues> {
   label: string;
   type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'datetime-local';
   placeholder?: string;
+  value?: string;
   rules?: RegisterOptions<TFormValues>;
   methods: UseFormReturn<TFormValues>;
   className?: string;
@@ -91,6 +92,7 @@ interface SelectFieldProps<TFormValues extends FieldValues> {
   name: Path<TFormValues>;
   label: string;
   options: { value: string; label: string }[];
+  value?: string;
   rules?: RegisterOptions;
   methods: UseFormReturn<TFormValues>;
   className?: string;
@@ -101,6 +103,7 @@ export function SelectField<TFormValues extends FieldValues>({
   name,
   label,
   options,
+  value,
   rules,
   methods,
   className = '',

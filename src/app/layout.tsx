@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { NotificationProvider, NotificationContainer } from "@/context/NotificationContext";
+import { ToastProvider } from "@/context/ToastContext";
 
 const outfit = Outfit({
   variable: "--font-outfit-sans",
@@ -21,8 +22,10 @@ export default function RootLayout({
         <ThemeProvider>
           <SidebarProvider>
             <NotificationProvider>
-              {children}
-              <NotificationContainer />
+              <ToastProvider>
+                {children}
+                <NotificationContainer />
+              </ToastProvider>
             </NotificationProvider>
           </SidebarProvider>
         </ThemeProvider>
