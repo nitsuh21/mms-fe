@@ -474,8 +474,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   })}
                   label="Status"
                   options={[
-                    { value: true, label: 'Active' },
-                    { value: false, label: 'Inactive' },
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
                   ]}
                   methods={formMethods}
                 />

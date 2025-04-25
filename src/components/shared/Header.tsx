@@ -13,7 +13,7 @@ import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, ROUTES } from "@/config";
 import { useSidebar } from "@/context/SidebarContext";
 import { cn } from "@/lib/utils";
 
-const Header = () => {
+export const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -140,5 +140,3 @@ const Header = () => {
     </header>
   );
 };
-
-export default Header;

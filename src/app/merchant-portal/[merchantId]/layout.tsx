@@ -1,11 +1,11 @@
 "use client";
 
-import Header from "@/components/shared/Header";
-import Sidebar from "@/components/shared/Sidebar";
+import { Header, Sidebar } from "@/components/shared";
 import { AuthProvider } from '@/lib/auth/rbac';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { useParams } from 'next/navigation';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function MerchantIdLayout({
   children,
@@ -15,9 +15,13 @@ export default function MerchantIdLayout({
   const params = useParams();
   const merchantId = params.merchantId as string;
 
+  const queryClient = new QueryClient();
+
   return (
-    <AuthProvider role="merchant_admin" merchantId={merchantId}>
-      <SidebarProvider>
+    <NotificationProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider role="merchant_admin" merchantId={merchantId}>
+        <SidebarProvider>
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
           <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
@@ -29,7 +33,9 @@ export default function MerchantIdLayout({
             </main>
           </div>
         </div>
-      </SidebarProvider>
-    </AuthProvider>
+        </SidebarProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </NotificationProvider>
   );
 }

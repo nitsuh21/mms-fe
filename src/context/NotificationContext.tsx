@@ -30,6 +30,7 @@ interface NotificationAction {
 }
 
 interface NotificationContextType {
+  showNotification: (notification: { type: string; title: string; message: string }) => void;
   notifications: Notification[];
   addNotification: (notification: NotificationState) => void;
   removeNotification: (id: string) => void;
@@ -70,8 +71,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     dispatch({ type: 'REMOVE_NOTIFICATION', payload: { id } });
   }, []);
 
+  const showNotification = useCallback((notification: { type: string; title: string; message: string }) => {
+    addNotification(notification as NotificationState);
+  }, [addNotification]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
+    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification, showNotification }}>
       {children}
       <NotificationContainer />
     </NotificationContext.Provider>

@@ -80,6 +80,11 @@ const businessNavItems: NavItem[] = [
     href: "invoices",
     icon: FiFileText,
   },
+  {
+    title: "Affiliates",
+    href: "affiliates",
+    icon: FiUsers,
+  },
   // {
   //   title: "Reports",
   //   href: "reports",
@@ -120,7 +125,7 @@ const platformNavItems: NavItem[] = [
   },
 ];
 
-export default function Sidebar() {
+export function Sidebar() {
   const pathname = usePathname();
   const params = useParams();
   const merchantId = params?.merchantId as string;
