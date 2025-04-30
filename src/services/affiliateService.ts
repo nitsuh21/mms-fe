@@ -1,23 +1,37 @@
 import api from './api';
 
+export interface CampaignActivity {
+  id: number;
+  campaign: number;
+  participant: AffiliateParticipant;
+  activity_type: 'PAGE_VISIT' | 'CALL_CLICK' | 'SOCIAL_CLICK' | 'WEBSITE_CLICK';
+  points_earned: number;
+  metadata?: Record<string, any>;
+  timestamp: string;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
 export interface Campaign {
   id: number;
-  business: number;
   name: string;
   description: string;
-  category: 'PRODUCT' | 'SERVICE' | 'EVENT' | 'OTHER';
+  business: number;
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
   start_date: string;
   end_date: string;
+  points_per_birr: number;
   page_visit_points: number;
   call_click_points: number;
   social_click_points: number;
   point_value: number;
-  created_at: string;
-  updated_at: string;
+  participants?: AffiliateParticipant[];
+  rewards?: CampaignReward[];
   total_participants?: number;
   total_activities?: number;
   total_rewards?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AffiliateParticipant {
@@ -25,15 +39,10 @@ export interface AffiliateParticipant {
   username: string;
   phone: string;
   affiliate_id: string;
-  email: string | null;
+  email?: string;
   full_name: string;
   created_at: string;
-}
-
-export interface CampaignActivity {
-  id: number;
-  campaign: number;
-  participant: number;
+  activities?: CampaignActivity[];
   activity_type: 'PAGE_VISIT' | 'CALL_CLICK' | 'SOCIAL_CLICK';
   points_earned: number;
   timestamp: string;
@@ -60,6 +69,27 @@ export interface LeaderboardEntry {
   activities_count: number;
 }
 
+export interface Business {
+  id: number;
+  name: string;
+  description: string;
+  phone: string;
+  website: string;
+  address: string;
+  social_media: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
+  business_hours: {
+    weekday: string;
+    saturday: string;
+    sunday: string;
+  };
+  logo_url?: string;
+  cover_image_url?: string;
+}
+
 class AffiliateService {
   async getCampaigns(businessId?: string) {
     const url = businessId ? `/affiliates/campaigns/?business_id=${businessId}` : '/affiliates/campaigns/';
@@ -72,8 +102,8 @@ class AffiliateService {
     return response.data;
   }
 
-  async addMarketer(campaignId: number, data: { username: string; phone: string; email: string; commission_rate: number }) {
-    const response = await api.post(`/affiliates/campaigns/${campaignId}/marketers/`, data);
+  async addMarketer(data: { username: string; phone: string; email: string; campaign_id: number }) {
+    const response = await api.post('/affiliates/participants/', data);
     return response.data;
   }
 
@@ -98,6 +128,7 @@ class AffiliateService {
 
   async getCampaignLeaderboard(id: number) {
     const response = await api.get<LeaderboardEntry[]>(`/affiliates/campaigns/${id}/leaderboard/`);
+    console.log('Leaderboard:', response.data);
     return response.data;
   }
 
@@ -106,8 +137,8 @@ class AffiliateService {
     return response.data;
   }
 
-  async createParticipant(participant: Partial<AffiliateParticipant>) {
-    const response = await api.post<AffiliateParticipant>('/affiliates/participants/', participant);
+  async createParticipant(data: { username: string; phone: string; email?: string; full_name: string; campaign_id: number }) {
+    const response = await api.post<AffiliateParticipant>('/affiliates/participants/', data);
     return response.data;
   }
 
@@ -148,6 +179,20 @@ class AffiliateService {
 
   async markRewardAsPaid(id: number) {
     const response = await api.post<CampaignReward>(`/affiliates/rewards/${id}/mark_as_paid/`);
+    return response.data;
+  }
+
+  async createActivity(data: {
+    affiliate_id: string;
+    activity_type: CampaignActivity['activity_type'];
+    metadata?: Record<string, any>;
+  }): Promise<CampaignActivity> {
+    const response = await api.post('/affiliates/activities/', data);
+    return response.data;
+  }
+
+  async getBusinessByAffiliateId(affiliateId: string): Promise<Business> {
+    const response = await api.get(`/affiliates/participants/${affiliateId}/business/`);
     return response.data;
   }
 }

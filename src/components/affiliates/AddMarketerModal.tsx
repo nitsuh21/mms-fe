@@ -18,9 +18,9 @@ interface AddMarketerModalProps {
 
 const schema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
+  full_name: z.string().min(6, "Full name must be at least 6 characters"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
   email: z.string().email("Invalid email address"),
-  commission_rate: z.number().min(0).max(100, "Commission rate must be between 0 and 100"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -46,7 +46,10 @@ export function AddMarketerModal({
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
-      await affiliateService.addMarketer(campaignId, data);
+      await affiliateService.addMarketer({
+        ...data,
+        campaign_id: campaignId,
+      });
       showNotification({
         type: "success",
         title: "Success",
@@ -58,7 +61,7 @@ export function AddMarketerModal({
       showNotification({
         type: "error",
         title: "Error",
-        message: "Failed to add marketer. Please try again.",
+        message: "Failed to add participants. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -75,7 +78,7 @@ export function AddMarketerModal({
         <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Add Marketer
+              Add Participants
             </h2>
             <button
               onClick={onClose}
@@ -91,6 +94,14 @@ export function AddMarketerModal({
                 label="Username"
                 {...register("username")}
                 error={errors.username?.message}
+              />
+            </div>
+
+            <div>
+            <Input
+                label="Full Name"
+                {...register("full_name")}
+                error={errors.full_name?.message}
               />
             </div>
 
@@ -111,16 +122,6 @@ export function AddMarketerModal({
               />
             </div>
 
-            <div>
-              <Input
-                label="Commission Rate (%)"
-                type="number"
-                min={0}
-                max={100}
-                {...register("commission_rate", { valueAsNumber: true })}
-                error={errors.commission_rate?.message}
-              />
-            </div>
 
             <div className="flex justify-end space-x-4">
               <Button
@@ -134,7 +135,7 @@ export function AddMarketerModal({
                 type="submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Adding..." : "Add Marketer"}
+                {isSubmitting ? "Adding..." : "Add Participants"}
               </Button>
             </div>
           </form>

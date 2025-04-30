@@ -1,14 +1,16 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { FiArrowLeft, FiUserPlus, FiLink } from "react-icons/fi";
+import { FiArrowLeft, FiUserPlus, FiLink, FiEdit2, FiTrash2, FiGift } from "react-icons/fi";
+import { ParticipantsTable } from "@/components/affiliates/ParticipantsTable";
 import { Button, Card, Badge, Tabs, TabsContent, TabsList, TabsTrigger, ButtonGroup } from "@/components/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/shared";
-import { JoinCampaignModal, AddMarketerModal } from "@/components/affiliates";
-import { affiliateService, Campaign, LeaderboardEntry } from "@/services/affiliateService";
+import { AddMarketerModal } from "@/components/affiliates";
+import { affiliateService, Campaign, LeaderboardEntry, CampaignReward } from "@/services/affiliateService";
 import Link from "next/link";
 
 const statusColors = {
@@ -24,8 +26,12 @@ export default function CampaignDetailsPage() {
   const businessId = params?.businessId as string;
   const campaignId = params?.campaignId as string;
 
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isAddMarketerModalOpen, setIsAddMarketerModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAddRewardModalOpen, setIsAddRewardModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Partial<Campaign>>({});
+  const [rewardFormData, setRewardFormData] = useState<Partial<CampaignReward>>({});
 
   const { data: campaign, isLoading: isCampaignLoading } = useQuery<Campaign>({
     queryKey: ["campaign", campaignId],
@@ -38,6 +44,48 @@ export default function CampaignDetailsPage() {
     queryKey: ["leaderboard", campaignId],
     queryFn: () => affiliateService.getCampaignLeaderboard(Number(campaignId)),
   });
+
+  const handleDeleteCampaign = useCallback(async () => {
+    try {
+      await affiliateService.deleteCampaign(Number(campaignId));
+      console.log('Campaign deleted successfully');
+      window.location.href = `/merchant-portal/${merchantId}/businesses/${businessId}/affiliates`;
+    } catch (error) {
+      console.error('Failed to delete campaign');
+    }
+  }, [campaignId, merchantId, businessId]);
+
+  const handleEditSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await affiliateService.updateCampaign(Number(campaignId), editFormData);
+      setIsEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+    } catch (error) {
+      console.error('Failed to update campaign');
+    }
+  }, [campaignId, editFormData, queryClient]);
+
+  const handleRewardSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const selectedParticipant = leaderboard?.find(entry => entry.participant.id === rewardFormData.participant);
+      if (!selectedParticipant) {
+        console.error('Selected participant not found');
+        return;
+      }
+      await affiliateService.createReward({
+        ...rewardFormData,
+        campaign: Number(campaignId),
+        total_points: selectedParticipant.total_points,
+        status: 'PENDING',
+      });
+      setIsAddRewardModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+    } catch (error) {
+      console.error('Failed to create reward');
+    }
+  }, [campaignId, rewardFormData, leaderboard, queryClient]);
 
   if (isCampaignLoading) {
     return (
@@ -74,25 +122,42 @@ export default function CampaignDetailsPage() {
           <ButtonGroup>
             <Button
               variant="outline"
-              onClick={() => setIsJoinModalOpen(true)}
-            >
-              <FiLink className="mr-2 h-4 w-4" />
-              Join Campaign
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setIsAddMarketerModalOpen(true)}
             >
               <FiUserPlus className="mr-2 h-4 w-4" />
-              Add Marketer
+              Add Participant
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setIsAddRewardModalOpen(true)}
+            >
+              <FiGift className="mr-2 h-4 w-4" />
+              Add Reward
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              <FiEdit2 className="mr-2 h-4 w-4" />
+              Edit Campaign
+            </Button>
+
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteModalOpen(true)}
+            >
+              <FiTrash2 className="mr-2 h-4 w-4" />
+              Delete
             </Button>
             
-          <Link href={`/merchant-portal/${merchantId}/businesses/${businessId}/affiliates`}>
-            <Button variant="outline">
-              <FiArrowLeft className="mr-2 h-4 w-4" />
-              Back to Campaigns
-            </Button>
-          </Link>
+            <Link href={`/merchant-portal/${merchantId}/businesses/${businessId}/affiliates`}>
+              <Button variant="outline">
+                <FiArrowLeft className="mr-2 h-4 w-4" />
+                Back to Campaigns
+              </Button>
+            </Link>
           </ButtonGroup>
         }
       />
@@ -152,8 +217,9 @@ export default function CampaignDetailsPage() {
       </div>
 
       <div className="mt-8">
-        <Tabs defaultValue="leaderboard">
+        <Tabs defaultValue="participants">
           <TabsList>
+            <TabsTrigger value="participants">Participants</TabsTrigger>
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="activities">Activities</TabsTrigger>
             <TabsTrigger value="rewards">Rewards</TabsTrigger>
@@ -178,7 +244,19 @@ export default function CampaignDetailsPage() {
                         <span className="w-8 text-lg font-semibold">#{index + 1}</span>
                         <div>
                           <p className="font-medium">{entry.participant.username}</p>
-                          <p className="text-sm text-gray-500">{entry.participant.affiliate_id}</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm text-gray-500">{entry.participant.affiliate_id}</p>
+                            <Button
+                              className="h-5 w-5 p-0"
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/r/${entry.participant.affiliate_id}`);
+                              }}
+                              title="Copy affiliate link"
+                            >
+                              <FiLink className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -191,6 +269,30 @@ export default function CampaignDetailsPage() {
               ) : (
                 <p className="text-center text-gray-500">No participants yet</p>
               )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="participants">
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium">Campaign Participants</h3>
+                <Button
+                  variant="outline"
+                  className="h-8 text-sm"
+                  onClick={() => setIsAddMarketerModalOpen(true)}
+                >
+                  Add Participant
+                </Button>
+              </div>
+              <div className="mt-4">
+                {campaign.participants && campaign.participants.length > 0 ? (
+                  <ParticipantsTable participants={campaign.participants} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No participants yet
+                  </div>
+                )}
+              </div>
             </Card>
           </TabsContent>
 
@@ -208,15 +310,6 @@ export default function CampaignDetailsPage() {
         </Tabs>
       </div>
 
-      <JoinCampaignModal
-        isOpen={isJoinModalOpen}
-        onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={() => {
-          setIsJoinModalOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["leaderboard", campaignId] });
-        }}
-        campaignId={Number(campaignId)}
-      />
 
       <AddMarketerModal
         isOpen={isAddMarketerModalOpen}
@@ -227,6 +320,114 @@ export default function CampaignDetailsPage() {
         }}
         campaignId={Number(campaignId)}
       />
+
+      {/* Delete Campaign Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-500">
+            Are you sure you want to delete this campaign? This action cannot be undone.
+            All associated participants, activities, and rewards will be deleted.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDeleteCampaign}>
+              Delete Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Campaign Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Campaign</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleEditSubmit}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                defaultValue={campaign?.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                defaultValue={campaign?.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                rows={3}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Points per Birr</label>
+              <input
+                type="number"
+                defaultValue={campaign?.points_per_birr}
+                onChange={(e) => setEditFormData({ ...editFormData, points_per_birr: Number(e.target.value) })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Reward Modal */}
+      <Dialog open={isAddRewardModalOpen} onOpenChange={setIsAddRewardModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Reward</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleRewardSubmit}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Participant</label>
+              <select 
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                onChange={(e) => setRewardFormData({ ...rewardFormData, participant: Number(e.target.value) })}
+              >
+                <option value="">Select a participant</option>
+                {leaderboard?.map(entry => (
+                  <option key={entry.participant.id} value={entry.participant.id}>
+                    {entry.participant.username} ({entry.total_points} points)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Amount (Birr)</label>
+              <input
+                type="number"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                onChange={(e) => setRewardFormData({ ...rewardFormData, reward_amount: Number(e.target.value) })}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddRewardModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Add Reward
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -121,9 +121,9 @@ export function CreateCampaignModal({
               <div>
                 <label className="block text-sm font-medium mb-1">Category</label>
                 <Select {...register("category")}>
-                  <option value="PRODUCT">Product</option>
-                  <option value="SERVICE">Service</option>
+                  <option value="SOCIALMEDIA">Social Media</option>
                   <option value="EVENT">Event</option>
+                  <option value="DIRECT">Direct Marketing</option>
                   <option value="OTHER">Other</option>
                 </Select>
                 {errors.category && (
