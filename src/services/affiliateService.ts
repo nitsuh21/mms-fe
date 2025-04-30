@@ -182,12 +182,39 @@ class AffiliateService {
     return response.data;
   }
 
+  async getParticipantByAffiliateId(affiliateId: string): Promise<AffiliateParticipant> {
+    // Get all participants and find by affiliate_id
+    const response = await api.get('/affiliates/participants/');
+    const participant = response.data.results.find((p: AffiliateParticipant) => p.affiliate_id === affiliateId);
+    if (!participant) {
+      throw new Error('Participant not found');
+    }
+    return participant;
+  }
+
   async createActivity(data: {
     affiliate_id: string;
     activity_type: CampaignActivity['activity_type'];
     metadata?: Record<string, any>;
   }): Promise<CampaignActivity> {
-    const response = await api.post('/affiliates/activities/', data);
+    // First get the participant info from affiliate ID
+    const participant = await this.getParticipantByAffiliateId(data.affiliate_id);
+    
+    // Get the active campaign for this participant
+    const campaigns = await this.getParticipantCampaigns(participant.id);
+    const activeCampaign = campaigns.find(c => c.status === 'ACTIVE');
+    
+    if (!activeCampaign) {
+      throw new Error('No active campaign found for this participant');
+    }
+
+    // Create activity with participant and campaign info
+    const response = await api.post('/affiliates/activities/', {
+      participant: participant.id,
+      campaign: activeCampaign.id,
+      activity_type: data.activity_type,
+      metadata: data.metadata
+    });
     return response.data;
   }
 
