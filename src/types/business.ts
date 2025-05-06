@@ -16,6 +16,8 @@ export interface Business {
     email: string;
     phone: string;
     address: string;
+    timezone: string;
+    currency: string;
 
     // Media
     logo: string | null;
@@ -26,21 +28,34 @@ export interface Business {
     // Business Hours
     business_hours: Record<string, DaySchedule>;
 
+    // Notification Settings
+    notify_new_members: boolean;
+    notify_expiring_subscriptions: boolean;
+    notify_failed_payments: boolean;
+    email_notifications: boolean;
+    sms_notifications: boolean;
+
+    // Payment Settings
+    allow_auto_renew: boolean;
+    grace_period_days: number;
+    send_payment_reminders: boolean;
+    reminder_days_before: number;
+    allow_partial_payments: boolean;
+
     // Social Media
-    instagram: string | null;
-    facebook: string | null;
-    twitter: string | null;
-    tiktok: string | null;
-    youtube: string | null;
-    whatsapp: string | null;
-    telegram: string | null;
+    website_url: string | null;
+    instagram_url: string | null;
+    facebook_url: string | null;
+    twitter_url: string | null;
+    tiktok_url: string | null;
+    youtube_url: string | null;
+    whatsapp_url: string | null;
+    telegram_url: string | null;
 
     // Visibility Settings
     category: string;
+    subcategory: string;
     is_visible_in_search: boolean;
-    short_description: string;
-    website_url?: string;
-    instagram_url?: string;
 
     // Status and Relations
     merchant: string;
@@ -53,8 +68,8 @@ export interface CreateBusinessData {
     // Business Info
     name: string;
     description?: string;
-    contact_email: string;
-    contact_phone?: string;
+    email: string;
+    phone?: string;
     address?: string;
     timezone?: string;
     currency?: string;
@@ -62,6 +77,7 @@ export interface CreateBusinessData {
     // Visibility Settings
     logo?: string;
     category?: string;
+    subcategory?: string;
     is_visible_in_search?: boolean;
     short_description?: string;
     website_url?: string;

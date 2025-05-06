@@ -9,7 +9,7 @@ export const businessService = {
   },
 
   // Get a single business by ID
-  getBusiness: async (id: number): Promise<Business> => {
+  getBusiness: async (id: string): Promise<Business> => {
     const response = await api.get(`/businesses/businesses/${id}/`);
     return response.data;
   },
@@ -21,24 +21,25 @@ export const businessService = {
   },
 
   // Update a business
-  updateBusiness: async (id: number, data: Partial<Business>): Promise<Business> => {
+  updateBusiness: async (id: string, data: Partial<Business>): Promise<Business> => {
+    console.log({data});
     const response = await api.patch(`/businesses/businesses/${id}/`, data);
     return response.data;
   },
 
   // Delete a business
-  deleteBusiness: async (id: number): Promise<void> => {
+  deleteBusiness: async (id: string): Promise<void> => {
     await api.delete(`/businesses/businesses/${id}/`);
   },
 
   // Get business members
-  getBusinessMembers: async (businessId: number) => {
+  getBusinessMembers: async (businessId: string): Promise<any[]> => {
     const response = await api.get(`/businesses/businesses/${businessId}/members/`);
     return response.data;
   },
 
   // Add business member
-  addBusinessMember: async (businessId: number, email: string, role: string) => {
+  addBusinessMember: async (businessId: string, email: string, role: string): Promise<any> => {
     const response = await api.post(`/businesses/businesses/${businessId}/members/`, {
       email,
       role
@@ -47,7 +48,7 @@ export const businessService = {
   },
 
   // Update business member
-  updateBusinessMember: async (businessId: number, memberId: number, role: string) => {
+  updateBusinessMember: async (businessId: string, memberId: string, role: string): Promise<any> => {
     const response = await api.patch(`/businesses/businesses/${businessId}/members/${memberId}/`, {
       role
     });
@@ -55,7 +56,51 @@ export const businessService = {
   },
 
   // Remove business member
-  removeBusinessMember: async (businessId: number, memberId: number) => {
+  removeBusinessMember: async (businessId: string, memberId: string): Promise<void> => {
     await api.delete(`/businesses/businesses/${businessId}/members/${memberId}/`);
+  },
+
+  // Update business logo
+  updateBusinessLogo: async (businessId: string, logoFile: File): Promise<Business> => {
+    const formData = new FormData();
+    formData.append('logo', logoFile);
+    const response = await api.put(
+      `/businesses/businesses/${businessId}/update_logo/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  // Update business cover image
+  updateBusinessCover: async (businessId: string, coverFile: File): Promise<Business> => {
+    const formData = new FormData();
+    formData.append('cover_image', coverFile);
+    const response = await api.put(
+      `/businesses/businesses/${businessId}/update_cover/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  // Remove business logo
+  removeBusinessLogo: async (businessId: string): Promise<Business> => {
+    const response = await api.delete(`/businesses/businesses/${businessId}/remove_logo/`);
+    return response.data;
+  },
+
+  // Remove business cover image
+  removeBusinessCover: async (businessId: string): Promise<Business> => {
+    const response = await api.delete(`/businesses/businesses/${businessId}/remove_cover/`);
+    return response.data;
   }
 };

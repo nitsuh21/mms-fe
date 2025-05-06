@@ -1,20 +1,30 @@
-import { FieldErrors, UseFormRegister } from 'react-hook-form';
+import { FieldValues, UseFormReturn, Path } from 'react-hook-form';
+import React from 'react';
 
-interface SelectFieldProps {
-  name: string;
+type Option = {
+  value: string;
   label: string;
-  options: { value: string; label: string }[];
+};
+
+export interface SelectFieldProps<T extends FieldValues> {
+  name: Path<T>;
+  label: string;
+  description?: string;
+  options: Option[];
   rules?: any;
-  methods: any;
+  methods: UseFormReturn<T>;
+  disabled?: boolean;
 }
 
-export function SelectField({
+export const SelectField = <T extends FieldValues>({
   name,
   label,
+  description,
   options,
   rules,
   methods,
-}: SelectFieldProps) {
+  disabled
+}: SelectFieldProps<T>): React.ReactElement => {
   const {
     register,
     formState: { errors },
@@ -25,23 +35,30 @@ export function SelectField({
       <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
       </label>
+      {description && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {description}
+        </p>
+      )}
       <select
         {...register(name, rules)}
         id={name}
-        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        disabled={disabled}
+        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <option value="">Select {label}</option>
-        {options.map((option) => (
+        {options?.map((option: Option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
-        ))}
+        )) || []}
       </select>
       {errors[name] && (
         <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-          {errors[name]?.message}
+          {errors[name]?.message as React.ReactNode}
         </p>
       )}
     </div>
   );
-}
+};
+

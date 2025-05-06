@@ -30,6 +30,11 @@ export interface Campaign {
   total_participants?: number;
   total_activities?: number;
   total_rewards?: number;
+  total_points?: number;
+  page_visits?: number;
+  call_clicks?: number;
+  social_clicks?: number;
+  total_rewards_amount?: number;
   created_at: string;
   updated_at: string;
 }
@@ -53,7 +58,7 @@ export interface AffiliateParticipant {
 export interface CampaignReward {
   id: number;
   campaign: number;
-  participant: number;
+  participant: string;
   total_points: number;
   reward_amount: number;
   status: 'PENDING' | 'APPROVED' | 'PAID' | 'REJECTED';
@@ -63,10 +68,17 @@ export interface CampaignReward {
 }
 
 export interface LeaderboardEntry {
-  participant: AffiliateParticipant;
+  participant: {
+    id: number;
+    username: string;
+    full_name: string;
+  };
   total_points: number;
   total_reward_amount: number;
   activities_count: number;
+  has_active_reward: boolean;
+  reward_id?: number;
+  reward_status?: 'PENDING' | 'APPROVED' | 'PAID';
 }
 
 export interface Business {
@@ -91,6 +103,9 @@ export interface Business {
 }
 
 class AffiliateService {
+  async removeParticipant(participantId: number): Promise<void> {
+    await api.delete(`/affiliates/participants/${participantId}/`);
+  }
   async getCampaigns(businessId?: string) {
     const url = businessId ? `/affiliates/campaigns/?business_id=${businessId}` : '/affiliates/campaigns/';
     const response = await api.get<any>(url);
@@ -157,9 +172,10 @@ class AffiliateService {
     return response.data;
   }
 
-  async getRewards() {
-    const response = await api.get<CampaignReward[]>('/affiliates/rewards/');
-    return response.data;
+  async getRewards(campaignId?: number) {
+    const url = campaignId ? `/affiliates/rewards/?campaign=${campaignId}` : '/affiliates/rewards/';
+    const response = await api.get<{results: CampaignReward[]}>(`${url}`);
+    return response.data.results;
   }
 
   async createReward(reward: Partial<CampaignReward>) {
@@ -172,9 +188,8 @@ class AffiliateService {
     return response.data;
   }
 
-  async rejectReward(id: number) {
-    const response = await api.post<CampaignReward>(`/affiliates/rewards/${id}/reject/`);
-    return response.data;
+  async revokeReward(rewardId: number): Promise<void> {
+    await api.post(`/affiliates/rewards/${rewardId}/revoke/`);
   }
 
   async markRewardAsPaid(id: number) {
@@ -221,6 +236,11 @@ class AffiliateService {
   async getBusinessByAffiliateId(affiliateId: string): Promise<Business> {
     const response = await api.get(`/affiliates/participants/${affiliateId}/business/`);
     return response.data;
+  }
+
+  async getCampaignActivities(campaignId: number): Promise<CampaignActivity[]> {
+    const response = await api.get<{results: CampaignActivity[]}>(`/affiliates/activities/?campaign=${campaignId}`);
+    return response.data.results;
   }
 }
 

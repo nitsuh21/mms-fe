@@ -21,8 +21,8 @@ type Business = {
   id: number;
   name: string;
   description: string;
-  logo?: string;
-  cover_image?: string;
+  logo_url?: string;
+  cover_image_url?: string;
   phone?: string;
   website?: string;
   address?: string;
@@ -65,6 +65,9 @@ export default function BusinessLandingPage() {
   useEffect(() => {
     const recordVisit = async () => {
       try {
+        // First verify that we can get the participant info
+        await affiliateService.getParticipantByAffiliateId(affiliateId);
+        // Then record the activity
         await affiliateService.createActivity({
           affiliate_id: affiliateId,
           activity_type: 'PAGE_VISIT'
@@ -163,7 +166,7 @@ export default function BusinessLandingPage() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card className="relative overflow-hidden shadow-lg transition-transform duration-300 hover:shadow-xl">
-          {business.cover_image && business.cover_image_url ? (
+          {business.cover_image_url ? (
             <div className="relative h-48 overflow-hidden">
               <Image
                 src={business.cover_image_url}
@@ -181,7 +184,7 @@ export default function BusinessLandingPage() {
           <div className="p-6">
             {/* Business Info */}
             <div className="flex items-center gap-4 mb-6">
-              {business.logo && business.logo_url ? (
+              {business.logo_url ? (
                 <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg">
                   <Image
                     src={business.logo_url}

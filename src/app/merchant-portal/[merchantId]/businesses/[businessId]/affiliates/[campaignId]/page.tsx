@@ -4,13 +4,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { FiArrowLeft, FiUserPlus, FiLink, FiEdit2, FiTrash2, FiGift } from "react-icons/fi";
+import { FiArrowLeft, FiUserPlus, FiLink, FiEdit2, FiTrash2, FiGift, FiActivity } from "react-icons/fi";
 import { ParticipantsTable } from "@/components/affiliates/ParticipantsTable";
+import { LeaderboardTable } from "@/components/affiliates/LeaderboardTable";
+import { ActivitiesTable } from "@/components/affiliates/ActivitiesTable";
+import { RewardsTable } from "@/components/affiliates/RewardsTable";
 import { Button, Card, Badge, Tabs, TabsContent, TabsList, TabsTrigger, ButtonGroup } from "@/components/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/shared";
 import { AddMarketerModal } from "@/components/affiliates";
-import { affiliateService, Campaign, LeaderboardEntry, CampaignReward } from "@/services/affiliateService";
+import { affiliateService, Campaign, LeaderboardEntry, CampaignReward, CampaignActivity } from "@/services/affiliateService";
 import Link from "next/link";
 
 const statusColors = {
@@ -45,6 +48,16 @@ export default function CampaignDetailsPage() {
     queryFn: () => affiliateService.getCampaignLeaderboard(Number(campaignId)),
   });
 
+  const { data: activities, isLoading: isActivitiesLoading } = useQuery<CampaignActivity[]>({
+    queryKey: ["activities", campaignId],
+    queryFn: () => affiliateService.getCampaignActivities(Number(campaignId)),
+  });
+
+  const { data: rewards, isLoading: isRewardsLoading } = useQuery<CampaignReward[]>({
+    queryKey: ["rewards", campaignId],
+    queryFn: () => affiliateService.getRewards(Number(campaignId)),
+  });
+
   const handleDeleteCampaign = useCallback(async () => {
     try {
       await affiliateService.deleteCampaign(Number(campaignId));
@@ -69,7 +82,7 @@ export default function CampaignDetailsPage() {
   const handleRewardSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const selectedParticipant = leaderboard?.find(entry => entry.participant.id === rewardFormData.participant);
+      const selectedParticipant = leaderboard?.find(entry => String(entry.participant.id) === String(rewardFormData.participant));
       if (!selectedParticipant) {
         console.error('Selected participant not found');
         return;
@@ -120,21 +133,6 @@ export default function CampaignDetailsPage() {
         description={campaign.description}
         action={
           <ButtonGroup>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddMarketerModalOpen(true)}
-            >
-              <FiUserPlus className="mr-2 h-4 w-4" />
-              Add Participant
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => setIsAddRewardModalOpen(true)}
-            >
-              <FiGift className="mr-2 h-4 w-4" />
-              Add Reward
-            </Button>
 
             <Button
               variant="outline"
@@ -199,18 +197,38 @@ export default function CampaignDetailsPage() {
 
         <Card className="p-6">
           <h3 className="text-sm font-medium text-gray-500 mb-4">Campaign Stats</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <p className="text-2xl font-semibold">{campaign.total_participants || 0}</p>
               <p className="text-xs text-gray-500">Participants</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-semibold">{campaign.total_activities || 0}</p>
-              <p className="text-xs text-gray-500">Activities</p>
+              <p className="text-xs text-gray-500">Total Activities</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-semibold">{campaign.total_rewards || 0}</p>
-              <p className="text-xs text-gray-500">Rewards</p>
+              <p className="text-xs text-gray-500">Rewards Given</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{campaign.total_points || 0}</p>
+              <p className="text-xs text-gray-500">Total Points</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{campaign.page_visits || 0}</p>
+              <p className="text-xs text-gray-500">Page Visits</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{campaign.call_clicks || 0}</p>
+              <p className="text-xs text-gray-500">Call Clicks</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{campaign.social_clicks || 0}</p>
+              <p className="text-xs text-gray-500">Social Clicks</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold">{(campaign.total_rewards_amount || 0).toLocaleString()} Birr</p>
+              <p className="text-xs text-gray-500">Total Rewards</p>
             </div>
           </div>
         </Card>
@@ -226,48 +244,20 @@ export default function CampaignDetailsPage() {
           </TabsList>
 
           <TabsContent value="leaderboard">
-            <Card className="p-6">
+            <Card>
               {isLeaderboardLoading ? (
-                <div className="animate-pulse space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                  ))}
+                <div className="p-8">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
                 </div>
               ) : leaderboard && leaderboard.length > 0 ? (
-                <div className="space-y-4">
-                  {leaderboard.map((entry, index) => (
-                    <div
-                      key={entry.participant.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center">
-                        <span className="w-8 text-lg font-semibold">#{index + 1}</span>
-                        <div>
-                          <p className="font-medium">{entry.participant.username}</p>
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm text-gray-500">{entry.participant.affiliate_id}</p>
-                            <Button
-                              className="h-5 w-5 p-0"
-                              variant="outline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(`${window.location.origin}/r/${entry.participant.affiliate_id}`);
-                              }}
-                              title="Copy affiliate link"
-                            >
-                              <FiLink className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{entry.total_points} points</p>
-                        <p className="text-sm text-gray-500">{entry.total_reward_amount} Birr</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <LeaderboardTable entries={leaderboard} campaignId={Number(campaignId)} />
               ) : (
-                <p className="text-center text-gray-500">No participants yet</p>
+                <div className="p-8 text-center text-gray-500">
+                  No activities recorded yet
+                </div>
               )}
             </Card>
           </TabsContent>
@@ -297,14 +287,49 @@ export default function CampaignDetailsPage() {
           </TabsContent>
 
           <TabsContent value="activities">
-            <Card className="p-6">
-              <p className="text-center text-gray-500">Activity tracking coming soon</p>
+            <Card>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium">Campaign Activities</h3>
+                  <div className="flex items-center gap-2">
+                    <FiActivity className="w-5 h-5 text-gray-500" />
+                    <span className="text-sm text-gray-500">{activities?.length || 0} activities</span>
+                  </div>
+                </div>
+                {isActivitiesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : activities && activities.length > 0 ? (
+                  <ActivitiesTable activities={activities} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No activities recorded yet
+                  </div>
+                )}
+              </div>
             </Card>
           </TabsContent>
 
           <TabsContent value="rewards">
-            <Card className="p-6">
-              <p className="text-center text-gray-500">Rewards management coming soon</p>
+            <Card>
+              {isRewardsLoading ? (
+                <div className="p-8">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ) : rewards && rewards.length > 0 ? (
+                <RewardsTable 
+                  rewards={rewards} 
+                  onStatusChange={() => queryClient.invalidateQueries({ queryKey: ["rewards", campaignId] })} 
+                />
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  No rewards created yet
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>
@@ -368,7 +393,7 @@ export default function CampaignDetailsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Points per Birr</label>
+              <label className="block text-sm font-medium text-gray-700">Points</label>
               <input
                 type="number"
                 defaultValue={campaign?.points_per_birr}
@@ -389,7 +414,7 @@ export default function CampaignDetailsPage() {
       </Dialog>
 
       {/* Add Reward Modal */}
-      <Dialog open={isAddRewardModalOpen} onOpenChange={setIsAddRewardModalOpen}>
+      {/* <Dialog open={isAddRewardModalOpen} onOpenChange={setIsAddRewardModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Reward</DialogTitle>
@@ -427,7 +452,7 @@ export default function CampaignDetailsPage() {
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }
