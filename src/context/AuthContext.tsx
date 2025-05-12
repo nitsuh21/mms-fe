@@ -43,14 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (token: string, userData: User) => {
-    localStorage.setItem('token', token);
+  const login = (accessToken: string, userData: User) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', 'refreshToken'); // added this line
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
     router.push('/auth/signin');

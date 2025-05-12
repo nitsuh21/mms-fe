@@ -1,4 +1,4 @@
-export type PaymentType = 'REG' | 'DEP' | 'REF' | 'ADJ' | 'OTH';
+export type PaymentType = 'base' | 'penalty' | 'extra' | 'other' | 'other';
 
 export interface Payment {
   id: number;

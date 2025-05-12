@@ -19,8 +19,10 @@ interface AddMarketerModalProps {
 const schema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   full_name: z.string().min(6, "Full name must be at least 6 characters"),
-  phone: z.string().min(10, "Phone number must be at least 10 characters"),
-  email: z.string().email("Invalid email address"),
+  phone: z.string()
+    .min(10, "Phone number must be at least 10 characters")
+    .regex(/^[0-9+]+$/, "Phone number must contain only digits and + symbol"),
+  email: z.string().email("Invalid email address").optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -57,11 +59,19 @@ export function AddMarketerModal({
       });
       reset();
       onSuccess();
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
+      let errorMessage = "Failed to add participant. Please try again.";
+      
+      // Handle the specific case where participant already exists
+      if (error.response?.data?.error === 'Participant already exists in this campaign') {
+        errorMessage = error.response.data.detail || 'This participant is already registered in this campaign.';
+      }
+      
       showNotification({
         type: "error",
         title: "Error",
-        message: "Failed to add participants. Please try again.",
+        message: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

@@ -81,11 +81,13 @@ export default function SubscriptionDetailsPage() {
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
               subscription.status === 'AC' ? 'bg-green-100 text-green-800' :
               subscription.status === 'TR' ? 'bg-blue-100 text-blue-800' :
+              subscription.status === 'PE' ? 'bg-yellow-100 text-yellow-800' :
               subscription.status === 'PD' ? 'bg-yellow-100 text-yellow-800' :
               'bg-red-100 text-red-800'
             }`}>
               {subscription.status === 'AC' ? 'Active' :
                subscription.status === 'TR' ? 'Trial' :
+               subscription.status === 'PE' ? 'Pending' :
                subscription.status === 'PD' ? 'Past Due' :
                'Cancelled'}
             </span>

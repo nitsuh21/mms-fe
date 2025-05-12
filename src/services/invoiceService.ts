@@ -88,6 +88,7 @@ export const invoiceService = {
    */
   async createPayment(data: CreatePaymentData): Promise<Payment> {
     try {
+      console.log('Creating payment:', data);
       const response = await api.post(`/subscriptions/invoices/${data.invoice}/payments/`, data);
       return response.data;
     } catch (error) {

@@ -17,6 +17,7 @@ export interface Campaign {
   name: string;
   description: string;
   business: number;
+  category: 'PRODUCT' | 'SERVICE' | 'EVENT' | 'OTHER';
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
   start_date: string;
   end_date: string;
@@ -117,7 +118,7 @@ class AffiliateService {
     return response.data;
   }
 
-  async addMarketer(data: { username: string; phone: string; email: string; campaign_id: number }) {
+  async addMarketer(data: { username: string; phone: string; email?: string; campaign_id: number }) {
     const response = await api.post('/affiliates/participants/', data);
     return response.data;
   }
@@ -198,13 +199,12 @@ class AffiliateService {
   }
 
   async getParticipantByAffiliateId(affiliateId: string): Promise<AffiliateParticipant> {
-    // Get all participants and find by affiliate_id
-    const response = await api.get('/affiliates/participants/');
-    const participant = response.data.results.find((p: AffiliateParticipant) => p.affiliate_id === affiliateId);
-    if (!participant) {
+    // Get participant by affiliate_id directly from the backend
+    const response = await api.get(`/affiliates/participants/by-affiliate-id/${affiliateId}/`);
+    if (!response.data) {
       throw new Error('Participant not found');
     }
-    return participant;
+    return response.data;
   }
 
   async createActivity(data: {
@@ -234,12 +234,23 @@ class AffiliateService {
   }
 
   async getBusinessByAffiliateId(affiliateId: string): Promise<Business> {
-    const response = await api.get(`/affiliates/participants/${affiliateId}/business/`);
-    return response.data;
+    try {
+      const response = await api.get(`/affiliates/participants/${affiliateId}/business/`);
+      console.log('Business response:', response.data); // Debug log
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching business:', error);
+      throw error;
+    }
   }
 
   async getCampaignActivities(campaignId: number): Promise<CampaignActivity[]> {
     const response = await api.get<{results: CampaignActivity[]}>(`/affiliates/activities/?campaign=${campaignId}`);
+    console.log('Activities response:', response.data); // Debug log
+    if (!response.data.results) {
+      console.warn('No results found in activities response');
+      return [];
+    }
     return response.data.results;
   }
 }

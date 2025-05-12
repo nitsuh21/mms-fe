@@ -13,7 +13,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isLoading && isMounted && typeof window !== 'undefined') {
       if (!isAuthenticated) {
-        window.location.replace('/login');
+        window.location.replace('/auth/signin');
         return;
       }
 

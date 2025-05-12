@@ -43,14 +43,14 @@ export interface Business {
     allow_partial_payments: boolean;
 
     // Social Media
-    website_url: string | null;
-    instagram_url: string | null;
-    facebook_url: string | null;
-    twitter_url: string | null;
-    tiktok_url: string | null;
-    youtube_url: string | null;
-    whatsapp_url: string | null;
-    telegram_url: string | null;
+    website: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    twitter: string | null;
+    tiktok: string | null;
+    youtube: string | null;
+    whatsapp: string | null;
+    telegram: string | null;
 
     // Visibility Settings
     category: string;
@@ -80,8 +80,8 @@ export interface CreateBusinessData {
     subcategory?: string;
     is_visible_in_search?: boolean;
     short_description?: string;
-    website_url?: string;
-    instagram_url?: string;
+    website?: string;
+    instagram?: string;
 }
 
 export interface UpdateBusinessData extends Partial<CreateBusinessData> {

@@ -64,6 +64,7 @@ export interface Plan {
   description: string;
   business: string;
   interval: 'D' | 'W' | 'M' | 'Y';
+  grace_period_days: number;
   price: number;
   discounted_price: number;
   has_trial: boolean;
@@ -81,6 +82,7 @@ export interface CreatePlanData {
   description: string;
   business: string;
   interval: 'D' | 'W' | 'M' | 'Y';
+  grace_period_days: number;
   price: number;
   discounted_price: number;
   has_trial: boolean;
@@ -98,6 +100,7 @@ export interface UpdatePlanData {
   has_trial?: boolean;
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
+  grace_period_days?: number;
   trial_days?: number;
   features?: string;
   is_active?: boolean;

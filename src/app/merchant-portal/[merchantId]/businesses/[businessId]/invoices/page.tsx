@@ -15,6 +15,8 @@ export default function InvoicesPage() {
   const businessId = params.businessId;
   const merchantId = params.merchantId;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,7 +28,9 @@ export default function InvoicesPage() {
     try {
       setIsLoading(true);
       const response = await invoiceService.getInvoices(businessId);
-      setInvoices(response || []);
+      const invoiceData = response || [];
+      setInvoices(invoiceData);
+      setFilteredInvoices(invoiceData);
       setError(null);
     } catch (err) {
       console.error('Error loading invoices:', err);
@@ -78,6 +82,28 @@ export default function InvoicesPage() {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Invoices</h1>
+        <div className="flex-1 mx-8">
+          <input
+            type="text"
+            placeholder="Search invoices by customer name, invoice number, or amount..."
+            value={searchTerm}
+            onChange={(e) => {
+              const term = e.target.value;
+              setSearchTerm(term);
+              if (!term.trim()) {
+                setFilteredInvoices(invoices);
+              } else {
+                const filtered = invoices.filter(invoice => 
+                  invoice.invoice_number?.toLowerCase().includes(term.toLowerCase()) ||
+                  invoice.customer_name?.toLowerCase().includes(term.toLowerCase()) ||
+                  invoice.amount.toString().includes(term)
+                );
+                setFilteredInvoices(filtered);
+              }
+            }}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
         <div className="flex gap-2">
 
           <button
@@ -92,7 +118,7 @@ export default function InvoicesPage() {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <InvoiceList
-          invoices={invoices}
+          invoices={filteredInvoices}
           onRefresh={handleRefresh}
           onOpenPaymentModal={handleOpenPaymentModal}
         />

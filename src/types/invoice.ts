@@ -1,5 +1,6 @@
 export interface Invoice {
   id: number;
+  invoice_number: string;
   subscription: {
     id: number;
     customer: {
@@ -12,7 +13,7 @@ export interface Invoice {
   customer_name: string;
   customer_email: string;
   amount: number;
-  payment_method: 'MT' | 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
+  payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG' | 'CBE' | 'BOA' | 'AW' | 'OT';
   status: 'P' | 'C' | 'O' | 'PA';
   due_date: string;
   paid_date?: string;
@@ -28,7 +29,7 @@ export interface Payment {
   id: number;
   invoice: number;
   amount: number;
-  payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
+  payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG' | 'CBE' | 'BOA' | 'AW' | 'OT';
   payment_type: 'base' | 'penalty' | 'extra' | 'other';
   reason: string;
   status: 'P' | 'C' | 'F' | 'R';
@@ -40,7 +41,7 @@ export interface Payment {
 export interface CreateInvoiceData {
   subscription: number;
   amount: number;
-  payment_method: 'MT' | 'CA' | 'TB' | 'CB' | 'CP' | 'AG';
+  payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG' | 'CBE' | 'BOA' | 'AW' | 'OT';
   due_date?: string;
 }
 
@@ -52,6 +53,7 @@ export interface UpdateInvoiceData {
 }
 
 export interface CreatePaymentData {
+  
   invoice: number;
   amount: number;
   payment_method: 'CA' | 'TB' | 'CB' | 'CP' | 'AG';

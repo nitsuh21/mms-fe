@@ -16,11 +16,10 @@ const paymentMethods = [
 ] as const;
 
 const paymentTypes = [
-  { value: 'REG', label: 'Regular Payment' },
-  { value: 'DEP', label: 'Deposit' },
-  { value: 'REF', label: 'Refund' },
-  { value: 'ADJ', label: 'Adjustment' },
-  { value: 'OTH', label: 'Other' },
+  { value: 'base', label: 'Regular Payment' },
+  { value: 'extra', label: 'Extra Payment' },
+  { value: 'penalty', label: 'Penalty Payment' },
+  { value: 'other', label: 'Other' },
 ] as const;
 
 interface PaymentModalProps {
@@ -39,9 +38,9 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
     invoice: 0,
     amount: 0,
     payment_method: 'CA',
-    payment_type: 'REG' as PaymentType,
+    payment_type: 'base',
     reason: '',
-    reference_number: '',  // Empty string as default
+    reference_number: '',  
   });
 
   const validateForm = (): boolean => {
@@ -56,8 +55,7 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
     }
 
     // No remaining balance validation
-
-    // Reason is optional
+      
 
     if (paymentData.payment_method === 'TB' && !paymentData.reference_number) {
       newErrors.reference_number = 'Reference number is required for Telebirr payments';
@@ -82,8 +80,12 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
     try {
       setIsLoading(true);
       const response = await invoiceService.createPayment({
-        ...paymentData,
         invoice: invoice.id,
+        amount: paymentData.amount,
+        payment_method: paymentData.payment_method,
+        payment_type: paymentData.payment_type,
+        reason: paymentData.reason || '',
+        reference_number: paymentData.reference_number || ''
       });
 
       // Update invoice status
@@ -102,8 +104,8 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
         amount: 0,
         payment_method: 'CA',
         payment_type: 'base' as PaymentType,
-        reason: '',
-        reference_number: '',
+        reason: paymentData.reason || '',
+        reference_number: paymentData.reference_number || '',
       });
       setErrors({});
     } catch (err: any) {
@@ -219,12 +221,12 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
               name="payment_method"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
             >
-              <option value="MT">Manual Transfer</option>
               <option value="CA">Cash</option>
               <option value="TB">TeleBirr</option>
-              <option value="CB">CBE Birr</option>
-              <option value="CP">Commercial Bank</option>
-              <option value="AG">Amole/Geta</option>
+              <option value="CBE">CBE</option>
+              <option value="BOA">Bank of Abyssinia</option>
+              <option value="AW">Awash</option>
+              <option value="OT">Others</option>
             </select>
           </div>
           <div>

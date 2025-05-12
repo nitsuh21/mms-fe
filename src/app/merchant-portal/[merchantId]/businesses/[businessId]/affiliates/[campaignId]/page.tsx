@@ -11,6 +11,7 @@ import { ActivitiesTable } from "@/components/affiliates/ActivitiesTable";
 import { RewardsTable } from "@/components/affiliates/RewardsTable";
 import { Button, Card, Badge, Tabs, TabsContent, TabsList, TabsTrigger, ButtonGroup } from "@/components/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { CreateCampaignModal } from "@/components/affiliates/CreateCampaignModal";
 import { PageHeader } from "@/components/shared";
 import { AddMarketerModal } from "@/components/affiliates";
 import { affiliateService, Campaign, LeaderboardEntry, CampaignReward, CampaignActivity } from "@/services/affiliateService";
@@ -136,14 +137,33 @@ export default function CampaignDetailsPage() {
 
             <Button
               variant="outline"
+              className="h-8 text-sm bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 transition-all duration-200 rounded-lg px-4"
               onClick={() => setIsEditModalOpen(true)}
             >
               <FiEdit2 className="mr-2 h-4 w-4" />
               Edit Campaign
             </Button>
 
+            {/* <Dialog open={isEditModalOpen} onOpenChange={() => setIsEditModalOpen(false)}>
+              <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <DialogContent className="mx-auto max-w-2xl w-full rounded-lg bg-white dark:bg-gray-800 p-6 border dark:border-gray-700 shadow-lg dark:shadow-gray-900/50">
+                  <CreateCampaignModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSuccess={() => {
+                      setIsEditModalOpen(false);
+                      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+                    }}
+                    campaign={campaign}
+                  />
+                </DialogContent>
+              </div>
+            </Dialog> */}
+
             <Button
               variant="danger"
+              className="h-8 text-sm bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 transition-all duration-200 rounded-lg px-4"
               onClick={() => setIsDeleteModalOpen(true)}
             >
               <FiTrash2 className="mr-2 h-4 w-4" />
@@ -151,7 +171,10 @@ export default function CampaignDetailsPage() {
             </Button>
             
             <Link href={`/merchant-portal/${merchantId}/businesses/${businessId}/affiliates`}>
-              <Button variant="outline">
+              <Button 
+                variant="outline"
+                className="h-8 text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-700 border-gray-200 hover:border-gray-300 transition-all duration-200 rounded-lg px-4"
+              >
                 <FiArrowLeft className="mr-2 h-4 w-4" />
                 Back to Campaigns
               </Button>
@@ -227,8 +250,8 @@ export default function CampaignDetailsPage() {
               <p className="text-xs text-gray-500">Social Clicks</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-semibold">{(campaign.total_rewards_amount || 0).toLocaleString()} Birr</p>
-              <p className="text-xs text-gray-500">Total Rewards</p>
+              <p className="text-2xl font-semibold">{(campaign.total_rewards_amount || 0).toLocaleString()}</p>
+              <p className="text-xs text-gray-500">Total Rewards (Cash)</p>
             </div>
           </div>
         </Card>
@@ -268,10 +291,15 @@ export default function CampaignDetailsPage() {
                 <h3 className="text-lg font-medium">Campaign Participants</h3>
                 <Button
                   variant="outline"
-                  className="h-8 text-sm"
+                  className="h-8 text-sm bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 transition-all duration-200 rounded-lg px-4"
                   onClick={() => setIsAddMarketerModalOpen(true)}
                 >
-                  Add Participant
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Participant
+                  </span>
                 </Button>
               </div>
               <div className="mt-4">
@@ -336,14 +364,14 @@ export default function CampaignDetailsPage() {
       </div>
 
 
-      <AddMarketerModal
-        isOpen={isAddMarketerModalOpen}
-        onClose={() => setIsAddMarketerModalOpen(false)}
+      <CreateCampaignModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
         onSuccess={() => {
-          setIsAddMarketerModalOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["leaderboard", campaignId] });
+          setIsEditModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
         }}
-        campaignId={Number(campaignId)}
+        campaign={campaign}
       />
 
       {/* Delete Campaign Modal */}
@@ -367,51 +395,16 @@ export default function CampaignDetailsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Campaign Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Campaign</DialogTitle>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleEditSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input
-                type="text"
-                defaultValue={campaign?.name}
-                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                defaultValue={campaign?.description}
-                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                rows={3}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Points</label>
-              <input
-                type="number"
-                defaultValue={campaign?.points_per_birr}
-                onChange={(e) => setEditFormData({ ...editFormData, points_per_birr: Number(e.target.value) })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/*Add MarketerModal*/}
+      <AddMarketerModal
+        isOpen={isAddMarketerModalOpen}
+        onClose={() => setIsAddMarketerModalOpen(false)}
+        onSuccess={() => {
+          setIsAddMarketerModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+        }}
+        campaignId={Number(campaignId)}
+      />
 
       {/* Add Reward Modal */}
       {/* <Dialog open={isAddRewardModalOpen} onOpenChange={setIsAddRewardModalOpen}>

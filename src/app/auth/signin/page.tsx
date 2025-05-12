@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiMail, FiLock } from 'react-icons/fi';
 import { AuthService } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SignInPage() {
   const [formData, setFormData] = useState({
@@ -20,6 +21,8 @@ export default function SignInPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const { login } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -29,11 +32,12 @@ export default function SignInPage() {
       const response = await AuthService.signIn(formData);
       
       // Store tokens and user info
-      AuthService.setTokens({
-        access: response.access,
-        refresh: response.refresh
-      });
-      AuthService.setUser(response.user);
+      // Convert user ID to string for AuthContext
+      const user = {
+        ...response.user,
+        id: response.user.id.toString()
+      };
+      login(response.access, user);
 
       // Redirect to the user's platform dashboard
       if (response.user?.id) {

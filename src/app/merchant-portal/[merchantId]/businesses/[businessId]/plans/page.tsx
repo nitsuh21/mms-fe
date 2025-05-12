@@ -31,6 +31,7 @@ interface PlanFormData {
   discounted_price?: number;
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
+  grace_period_days?: number;
   trial_days?: number;
   has_trial?: boolean;
   features?: string;
@@ -60,6 +61,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       discounted_price: 0,
       currency: 'ETB',
       interval: 'M',
+      grace_period_days: 0,
       trial_days: 0,
       features: '',
       is_active: true
@@ -75,6 +77,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
           price: Number(data.price),
           discounted_price: Number(data.discounted_price), 
           trial_days: Number(data.trial_days),
+          grace_period_days: Number(data.grace_period_days),
           has_trial: data.trial_days ? data.trial_days > 0 : false,
           is_active: typeof data.is_active === 'string' ? data.is_active === 'true' : data.is_active
         },
@@ -96,6 +99,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         currency: selectedPlan.currency,
         interval: selectedPlan.interval,
         trial_days: Number(selectedPlan.trial_days),
+        grace_period_days: Number(selectedPlan.grace_period_days),
         features: featuresString,
         is_active: selectedPlan.is_active,
       });
@@ -108,6 +112,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         currency: 'ETB',
         interval: 'M',
         trial_days: 0,
+        grace_period_days: 0,
         features: '',
         is_active: true,
       });
@@ -278,11 +283,13 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       const price = Number(data.price) || 0;
       
       const trialDays = Number(data.trial_days) || 0;
+      const gracePeriodDays = Number(data.grace_period_days) || 0;
       const planData = {
         business: businessId,
         name: data.name || '',
         description: data.description || '',
         interval: data.interval || 'M',
+        grace_period_days: gracePeriodDays,
         price: price,
         discounted_price: selectedPlan ? (Number(data.discounted_price) || price) : price, // Always use price as fallback
         currency: 'ETB',
@@ -664,6 +671,12 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                    plan.interval === 'W' ? 'Weekly' :
                    plan.interval === 'M' ? 'Monthly' :
                    'Yearly'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Grace Period:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {plan.grace_period_days} days
                 </span>
               </div>
               <div className="flex items-center gap-2">

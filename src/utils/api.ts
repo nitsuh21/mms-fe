@@ -12,9 +12,9 @@ const api = axios.create({
 // Add a request interceptor to add the auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
@@ -26,13 +26,33 @@ api.interceptors.request.use(
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response) {
       // Handle different error codes here
       if (error.response.status === 401) {
-        // Handle unauthorized
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        try {
+          // Try to refresh the token
+          const refreshToken = localStorage.getItem('refreshToken');
+          if (refreshToken) {
+            const response = await api.post('/auth/token/refresh/', {
+              refresh: refreshToken
+            });
+            
+            // Update access token
+            localStorage.setItem('accessToken', response.data.access);
+            
+            // Retry the original request
+            const originalRequest = error.config;
+            originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          // If refresh fails, clear tokens and redirect to login
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/auth/signin';
+        }
       }
     }
     return Promise.reject(error);

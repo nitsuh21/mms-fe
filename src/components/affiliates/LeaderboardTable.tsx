@@ -34,7 +34,7 @@ function RewardModal({ isOpen, onClose, entry, campaignId, onSuccess }: RewardMo
     try {
       setIsSubmitting(true);
       await affiliateService.createReward({
-        participant: entry.participant.id,
+        participant: entry.participant.id.toString(),
         campaign: campaignId,
         reward_amount: parseFloat(amount),
         total_points: entry.total_points

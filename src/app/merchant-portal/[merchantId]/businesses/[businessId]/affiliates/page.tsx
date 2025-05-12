@@ -30,7 +30,7 @@ export default function AffiliatesPage() {
         title="Affiliate Campaigns"
         description="Manage your affiliate marketing campaigns"
         action={
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button className="bg-blue-600 text-white font-semibold py-2 px-4 border border-blue-500" onClick={() => setIsCreateModalOpen(true)}>
             <FiPlus className="mr-2 h-4 w-4" />
             Create Campaign
           </Button>
@@ -45,6 +45,7 @@ export default function AffiliatesPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleCreateSuccess}
+        campaign={undefined}
       />
     </div>
   );

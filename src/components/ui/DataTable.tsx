@@ -18,14 +18,16 @@ interface DataTableProps<T> {
   itemsPerPage?: number;
 }
 
-export function DataTable<T>({
-  data,
-  columns,
-  onRowClick,
-  searchable = true,
-  filterable = true,
-  itemsPerPage = 10,
-}: DataTableProps<T>) {
+export function DataTable<T extends Record<string, unknown>>(
+  {
+    data,
+    columns,
+    onRowClick,
+    searchable = true,
+    filterable = true,
+    itemsPerPage = 10,
+  }: DataTableProps<T>
+) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -66,100 +68,102 @@ export function DataTable<T>({
   };
 
   return (
-    <div className="w-full">
-      {/* Search and Filter Bar */}
-      {(searchable || filterable) && (
-        <div className="mb-4 flex items-center justify-between gap-4">
-          {searchable && (
-            <div className="relative flex-1">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              />
-            </div>
-          )}
-          {filterable && (
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-              <FiFilter className="h-4 w-4" />
-              Filter
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                {columns.map((column) => (
-                  <th
-                    key={String(column.key)}
-                    onClick={() => handleSort(column.key)}
-                    className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
-                  >
-                    {column.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-              {paginatedData.map((item, index) => (
-                <tr
-                  key={index}
-                  onClick={() => onRowClick?.(item)}
-                  className={`${
-                    onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''
-                  }`}
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={String(column.key)}
-                      className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
-                    >
-                      {column.render
-                        ? column.render(item[column.key], item)
-                        : String(item[column.key])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-800"
-              >
-                <FiChevronLeft className="h-4 w-4" />
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-800"
-              >
-                Next
-                <FiChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-sm text-gray-700 dark:text-gray-300">
-              Page {currentPage} of {totalPages}
-            </div>
+    <div className="w-full overflow-x-auto">
+      <div className="flex items-center justify-between mb-4">
+        {searchable && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
+            />
+            <FiSearch className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </div>
         )}
+        {filterable && (
+          <button
+            onClick={() => {
+              // Add filter logic here
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
+          >
+            <FiFilter className="w-5 h-5" />
+            Filter
+          </button>
+        )}
       </div>
+
+      <table className="min-w-full">
+        <thead>
+          <tr className="bg-gray-50 dark:bg-gray-700">
+            {columns.map((column) => (
+              <th
+                key={column.key}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                onClick={() => {
+                  if (column.key === sortColumn) {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn(column.key);
+                    setSortDirection('asc');
+                  }
+                }}
+              >
+                {column.title}
+                {sortColumn === column.key && (
+                  <span className="ml-2">
+                    {sortDirection === 'asc' ? '↑' : '↓'}
+                  </span>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {paginatedData.map((item, index) => (
+            <tr
+              key={index}
+              onClick={() => onRowClick?.(item)}
+              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/10"
+            >
+              {columns.map((column) => (
+                <td
+                  key={column.key}
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300"
+                >
+                  {column.render ? column.render(item[column.key], item) : item[column.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {paginatedData.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            Showing {currentPage * itemsPerPage - itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} results
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/10 disabled:opacity-50"
+            >
+              <FiChevronLeft className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredData.length / itemsPerPage), prev + 1))}
+              disabled={currentPage === Math.ceil(filteredData.length / itemsPerPage)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/10 disabled:opacity-50"
+            >
+              <FiChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

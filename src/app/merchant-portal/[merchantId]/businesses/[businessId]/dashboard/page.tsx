@@ -1,14 +1,74 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
+import api from '@/utils/api';
 import { FiUsers, FiCreditCard, FiDollarSign, FiTrendingDown, FiCalendar, FiPieChart } from 'react-icons/fi';
 import { IconType } from 'react-icons';
+import { formatCurrency, formatNumber } from '../../../../../../../src/utils/format';
 
 interface TimeFilter {
-  period: 'day' | 'week' | 'month' | 'year';
-  date?: Date;
+  filterType: 'period' | 'range';
+  period?: 'day' | 'week' | 'month' | 'year';
+  startDate?: Date;
+  endDate?: Date;
+}
+
+interface ApiMetrics {
+  members: {
+    total: number;
+    active: number;
+    newThisMonth: number;
+    growthPercent: number;
+  };
+  subscriptions: {
+    total: number;
+    active: number;
+    trial: number;
+    growthPercent: number;
+  };
+  revenue: {
+    totalRevenue: number;
+    mrr: number;
+    growthPercent: number;
+  };
+  performance: {
+    performancePercent: number;
+    churnRate: number;
+    arpu: number;
+    growthPercent: number;
+  };
+  renewals: {
+    total: number;
+    thisMonth: number;
+    nextMonth: number;
+    growthRate: number;
+  };
+  campaigns: {
+    total: number;
+    active: number;
+    draft: number;
+    growthPercent: number;
+  };
+}
+
+interface Subtitle {
+  text: string;
+  value: string | number;
+}
+
+interface Metric {
+  title: string;
+  value: string | number;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  icon?: IconType;
+  details?: Array<{ text: string; value: string; }>;
+  change?: number;
+  showAsPercentage?: boolean;
+  subtitles?: Array<{ text: string; value: string | number; }>;
 }
 
 interface MembershipPlan {
@@ -37,21 +97,6 @@ interface DashboardData {
   };
   topPlans: MembershipPlan[];
   recentMembers: MemberActivity[];
-}
-
-interface Subtitle {
-  text: string;
-  value: string | number;
-}
-
-interface Metric {
-  change: ReactNode;
-  title: string;
-  value: string | number;
-  trend?: string;
-  icon?: IconType;
-  showAsPercentage?: boolean;
-  subtitles?: Subtitle[];
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year';
@@ -152,233 +197,225 @@ const PieChart = ({ data }: { data: { value: number; color: string }[] }) => {
   );
 };
 
-// Mock data
-
-
-const mockMetrics = {
-  firstRow: [
-    {
-      title: 'Total Members',
-      value: '3,456',
-      trend: 'up',
-      change: 2.5,
-      icon: FiUsers,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'Active', value: '2,890' },
-        { text: 'New This Month', value: '120' }
-      ]
-    },
-    {
-      title: 'Subscriptions',
-      value: '2,890',
-      trend: 'up',
-      change: 1.2,
-      icon: FiCreditCard,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'Active', value: '2,500' },
-        { text: 'Trial', value: '390' }
-      ]
-    },
-    {
-      title: 'Revenue',
-      value: '$145,678',
-      trend: 'up',
-      change: 12.5,
-      icon: FiDollarSign,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'MRR', value: '$12,500' },
-        { text: 'Growth', value: '+12.5%' }
-      ]
-    }
-  ],
-  secondRow: [
-    {
-      title: 'Performance',
-      value: '97.8%',
-      trend: 'down',
-      change: -0.5,
-      icon: FiTrendingDown,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'Churn', value: '2.2%' },
-        { text: 'ARPU', value: '$45.67' }
-      ]
-    },
-    {
-      title: 'Renewals',
-      value: '123',
-      trend: 'up',
-      change: 5,
-      icon: FiCalendar,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'This Week', value: '45' },
-        { text: 'Next Week', value: '78' }
-      ]
-    },
-    {
-      title: 'Campaigns',
-      value: '15',
-      trend: 'up',
-      change: 2,
-      icon: FiPieChart,
-      showAsPercentage: true,
-      subtitles: [
-        { text: 'Active', value: '8' },
-        { text: 'Draft', value: '7' }
-      ]
-    }
-  ]
-};
-
-const mockPlans: MembershipPlan[] = [
-  {
-    id: '1',
-    name: 'Premium Plan',
-    description: 'Full access to all features',
-    price: 29,
-    revenue: 2900,
-    growth: 15.3
-  },
-  {
-    id: '2',
-    name: 'Pro Plan',
-    description: 'Advanced features and support',
-    price: 49,
-    revenue: 4900,
-    growth: 20.5
-  },
-  {
-    id: '3',
-    name: 'Enterprise Plan',
-    description: 'Custom solutions for large teams',
-    price: 99,
-    revenue: 9900,
-    growth: 22.4
-  }
-];
-
-const mockMembers: MemberActivity[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    plan: 'Pro Plan',
-    status: 'active',
-    joinedAt: '2025-03-28',
-    lastActive: '2025-04-02'
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    plan: 'Basic Plan',
-    status: 'pending',
-    joinedAt: '2025-03-29',
-    lastActive: '2025-04-01'
-  },
-  {
-    id: '3',
-    name: 'Mike Johnson',
-    email: 'mike@example.com',
-    plan: 'Enterprise Plan',
-    status: 'inactive',
-    joinedAt: '2025-03-30',
-    lastActive: '2025-04-03'
-  },
-  {
-    id: '4',
-    name: 'Alice Brown',
-    email: 'alice@example.com',
-    plan: 'Pro Plan',
-    status: 'active',
-    joinedAt: '2025-03-31',
-    lastActive: '2025-03-31'
-  },
-  {
-    id: '5',
-    name: 'David Brown',
-    email: 'david@example.com',
-    plan: 'Basic Plan',
-    status: 'active',
-    joinedAt: '2025-04-01',
-    lastActive: '2025-04-02'
-  }
-];
-
+// Dashboard component
 export default function DashboardPage() {
-  const notification = useNotification();
+  const router = useRouter();
   const params = useParams();
   const businessId = params?.businessId as string;
-  const merchantId = params?.merchantId as string;
-
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>({
-    period: 'month',
-  });
-
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
-    metrics: {
-      firstRow: mockMetrics.firstRow,
-      secondRow: mockMetrics.secondRow
-    },
-    topPlans: mockPlans,
-    recentMembers: mockMembers
-  });
-
-  const [mounted, setMounted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { showNotification } = useNotification();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>({ filterType: 'period', period: 'year' });
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/signin');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    // TODO: Implement API call when platformService is ready
-    setLoading(false);
-  }, [timeFilter]);
+    const fetchDashboardData = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append('filterType', timeFilter.filterType);
+        
+        if (timeFilter.filterType === 'period' && timeFilter.period) {
+          params.append('period', timeFilter.period);
+        } else if (timeFilter.filterType === 'range' && timeFilter.startDate && timeFilter.endDate) {
+          params.append('startDate', timeFilter.startDate.toISOString().split('T')[0]);
+          params.append('endDate', timeFilter.endDate.toISOString().split('T')[0]);
+        }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+        const response = await api.get(`/api/subscriptions/dashboard/${businessId}/?${params.toString()}`);
+        if (response.data.success) {
+          const { metrics, topPlans, recentMembers } = response.data.data;
+          
+          // Transform API data into dashboard metrics
+          const getTrend = (value: number): 'up' | 'down' | 'neutral' => {
+            if (value > 0) return 'up';
+            if (value < 0) return 'down';
+            return 'neutral';
+          };
 
-  const formatNumber = (number: number) => {
-    return new Intl.NumberFormat('en-US').format(number);
-  };
+          const firstRow: Metric[] = [
+            {
+              title: 'Members',
+              value: formatNumber(metrics.members.total),
+              icon: FiUsers,
+              trend: getTrend(metrics.members.growthPercent),
+              change: Math.abs(metrics.members.growthPercent),
+              subtitles: [
+                { text: 'Active', value: formatNumber(metrics.members.active) },
+                { text: 'New This Month', value: formatNumber(metrics.members.newThisMonth) }
+              ]
+            },
+            {
+              title: 'Subscriptions',
+              value: formatNumber(metrics.subscriptions.total),
+              icon: FiCreditCard,
+              trend: getTrend(metrics.subscriptions.growthPercent),
+              change: Math.abs(metrics.subscriptions.growthPercent),
+              subtitles: [
+                { text: 'Active', value: formatNumber(metrics.subscriptions.active) },
+                { text: 'Trial', value: formatNumber(metrics.subscriptions.trial) }
+              ]
+            },
+            {
+              title: 'Revenue',
+              value: formatCurrency(metrics.revenue.totalRevenue),
+              icon: FiDollarSign,
+              trend: getTrend(metrics.revenue.growthPercent),
+              change: Math.abs(metrics.revenue.growthPercent),
+              subtitles: [
+                { text: 'MRR', value: formatCurrency(metrics.revenue.mrr) }
+              ]
+            }
+          ];
 
-  if (!mounted) return null;
+          const secondRow: Metric[] = [
+            {
+              title: 'Performance',
+              value: `${metrics.performance.performancePercent.toFixed(1)}%`,
+              icon: FiPieChart,
+              trend: getTrend(metrics.performance.growthPercent),
+              change: Math.abs(metrics.performance.growthPercent),
+              subtitles: [
+                { text: 'Churn Rate', value: `${metrics.performance.churnRate.toFixed(1)}%` },
+                { text: 'ARPU', value: formatCurrency(metrics.performance.arpu) }
+              ]
+            },
+            {
+              title: 'Renewals',
+              value: formatNumber(metrics.renewals.total),
+              icon: FiCalendar,
+              trend: getTrend(metrics.renewals.growthRate),
+              change: Math.abs(metrics.renewals.growthRate),
+              subtitles: [
+                { text: 'This Month', value: formatNumber(metrics.renewals.thisMonth) },
+                { text: 'Next Month', value: formatNumber(metrics.renewals.nextMonth) }
+              ]
+            },
+            {
+              title: 'Campaigns',
+              value: formatNumber(metrics.campaigns.total),
+              icon: FiTrendingDown,
+              trend: getTrend(metrics.campaigns.growthPercent),
+              change: Math.abs(metrics.campaigns.growthPercent),
+              subtitles: [
+                { text: 'Active', value: formatNumber(metrics.campaigns.active) },
+                { text: 'Draft', value: formatNumber(metrics.campaigns.draft) }
+              ]
+            }
+          ];
+
+          setDashboardData({
+            metrics: { firstRow, secondRow },
+            topPlans,
+            recentMembers
+          });
+        } else {
+          showNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to fetch dashboard data'
+        });
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        showNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to fetch dashboard data'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (businessId) {
+      fetchDashboardData();
+    }
+  }, [businessId, timeFilter.period, showNotification]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !dashboardData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-red-600 mb-4">{error || 'No data available'}</div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6" data-testid="dashboard-page">
       {/* Time Range Filter */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h2>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
           <select
-            value={timeFilter.period}
-            onChange={(e) => setTimeFilter((prev) => ({ ...prev, period: e.target.value as TimeFilter['period'] }))}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          >
-            <option value="day">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="year">This Year</option>
-          </select>
-          <input 
-            type="month"
-            value={timeFilter.date?.toISOString().slice(0, 7)}
+            value={timeFilter.filterType}
             onChange={(e) => {
-              const date = new Date(e.target.value);
-              setTimeFilter((prev) => ({ ...prev, date }));
+              const newFilterType = e.target.value as TimeFilter['filterType'];
+              setTimeFilter(newFilterType === 'period' 
+                ? { filterType: 'period', period: 'year' }
+                : { filterType: 'range', startDate: new Date(), endDate: new Date() }
+              );
             }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
-          />
+          >
+            <option value="period">Time Period</option>
+            <option value="range">Date Range</option>
+          </select>
+
+          {timeFilter.filterType === 'period' ? (
+            <select
+              value={timeFilter.period}
+              onChange={(e) => setTimeFilter({ ...timeFilter, period: e.target.value as TimeFilter['period'] })}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+            >
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <input
+                type="date"
+                value={timeFilter.startDate?.toISOString().split('T')[0]}
+                onChange={(e) => setTimeFilter({
+                  ...timeFilter,
+                  startDate: new Date(e.target.value)
+                })}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+              />
+              <span className="text-gray-500 dark:text-gray-400">to</span>
+              <input
+                type="date"
+                value={timeFilter.endDate?.toISOString().split('T')[0]}
+                onChange={(e) => setTimeFilter({
+                  ...timeFilter,
+                  endDate: new Date(e.target.value)
+                })}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+              />
+            </div>
+          )}
         </div>
       </div>
 
