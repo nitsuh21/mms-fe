@@ -90,10 +90,33 @@ interface MemberActivity {
   lastActive: string;
 }
 
+interface Metric {
+  title: string;
+  value: string | number;
+  icon?: IconType;
+  trend?: 'up' | 'down' | 'neutral';
+  change?: number;
+  subtitles?: Array<{
+    text: string;
+    value: string | number;
+  }>;
+}
+
 interface DashboardData {
   metrics: {
     firstRow: Metric[];
     secondRow: Metric[];
+    analytics: {
+      subscriptionTrends: Array<{
+        date: string;
+        value: number;
+      }>;
+      planDistribution: Array<{
+        name: string;
+        value: number;
+        percentage: number;
+      }>;
+    };
   };
   topPlans: MembershipPlan[];
   recentMembers: MemberActivity[];
@@ -102,6 +125,69 @@ interface DashboardData {
 type TimeRange = 'today' | 'week' | 'month' | 'year';
 
 // Chart components
+import dynamic from 'next/dynamic';
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
+
+interface ChartProps {
+  data: any[];
+  type: 'line' | 'donut';
+  title: string;
+  xKey?: string;
+  yKey?: string;
+  nameKey?: string;
+  valueKey?: string;
+}
+
+const Chart: React.FC<ChartProps> = ({ data, type, title, xKey, yKey, nameKey, valueKey }) => {
+  if (type === 'line') {
+    return (
+      <ReactApexChart
+        options={{
+          chart: { type: 'line', toolbar: { show: false } },
+          xaxis: { type: 'category' },
+          stroke: { curve: 'smooth' },
+          title: { text: title, style: { fontSize: '14px' } }
+        }}
+        series={[{
+          name: title,
+          data: data.map(d => ({
+            x: d[xKey || 'x'],
+            y: d[yKey || 'y']
+          }))
+        }]}
+        type="line"
+        height={200}
+      />
+    );
+  }
+
+  if (type === 'donut') {
+    return (
+      <ReactApexChart
+        options={{
+          chart: { type: 'donut' },
+          labels: data.map(d => d[nameKey || 'name']),
+          legend: { position: 'bottom' },
+          title: { text: title, style: { fontSize: '14px' } },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '65%',
+                background: 'transparent'
+              }
+            }
+          },
+          dataLabels: { enabled: false }
+        }}
+        series={data.map(d => d[valueKey || 'value'])}
+        type="donut"
+        height={200}
+      />
+    );
+  }
+
+  return null;
+};
 const LineChart = ({ data }: { data: number[] }) => {
   const maxValue = Math.max(...data);
   const minValue = Math.min(...data);
@@ -206,7 +292,18 @@ export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>({
+    metrics: {
+      firstRow: [],
+      secondRow: [],
+      analytics: {
+        subscriptionTrends: [],
+        planDistribution: []
+      }
+    },
+    topPlans: [],
+    recentMembers: []
+  });
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ filterType: 'period', period: 'year' });
 
   useEffect(() => {
@@ -311,7 +408,11 @@ export default function DashboardPage() {
           ];
 
           setDashboardData({
-            metrics: { firstRow, secondRow },
+            metrics: { 
+              firstRow, 
+              secondRow,
+              analytics: response.data.data.metrics.analytics
+            },
             topPlans,
             recentMembers
           });
@@ -459,7 +560,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Second Row Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {dashboardData.metrics.secondRow.map((metric: Metric, index: number) => (
           <div
             key={index}
@@ -497,10 +598,36 @@ export default function DashboardPage() {
         ))}
       </div>
 
+
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <Chart
+            type="line"
+            data={dashboardData.metrics.analytics.subscriptionTrends}
+            title="Subscription Trends"
+            xKey="date"
+            yKey="value"
+          />
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <Chart
+            type="donut"
+            data={dashboardData.metrics.analytics.planDistribution}
+            title="Plan Distribution"
+            nameKey="name"
+            valueKey="value"
+          />
+        </div>
+      </div>
+
       {/* Charts */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Subscriptions Over Time */}
-        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 lg:col-span-2">
+      {/* <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        
+      </div> */}
+
+      {/* Subscriptions Over Time */}
+        {/* <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 lg:col-span-2">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Subscriptions Over Time</h3>
           <div className="h-80">
             <div className="h-full flex flex-col">
@@ -523,10 +650,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Plan Distribution */}
-        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+        {/* <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Plan Distribution</h3>
           <div className="h-80">
             <div className="relative h-full">
@@ -553,9 +680,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
+        </div> */}
+      
       {/* Tables */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Top Performing Plans */}
