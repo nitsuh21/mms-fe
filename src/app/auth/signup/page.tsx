@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiMail, FiLock, FiUser, FiBriefcase } from 'react-icons/fi';
-import { authService } from '@/services/authService';
+import { AuthService } from '@/services/authService';
 import { SignUpData } from '@/types/auth';
 
 export default function SignUpPage() {
@@ -41,7 +41,7 @@ export default function SignUpPage() {
     }
 
     try {
-      const response = await authService.signUp(formData);
+      const response = await AuthService.signUp(formData);
       
       // Store tokens and user info
       localStorage.setItem('accessToken', response.access);
@@ -49,7 +49,7 @@ export default function SignUpPage() {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       // Redirect to dashboard
-      router.push('/merchant-portal/123/dashboard');
+      router.push(`/merchant-portal/${response.user.id}/platform/dashboard`);
     } catch (err: any) {
       console.error('Signup error:', err);
       setError(err.response?.data?.message || err.response?.data?.detail || 'An error occurred during sign up');

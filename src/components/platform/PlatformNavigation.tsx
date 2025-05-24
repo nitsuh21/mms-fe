@@ -10,6 +10,7 @@ import {
   FiActivity,
 } from "react-icons/fi";
 import { cn } from "@/lib/utils";
+import NotificationDropdown from "@/components/shared/NotificationDropdown";
 
 interface NavItem {
   title: string;
@@ -28,21 +29,21 @@ const platformNavItems: NavItem[] = [
     href: "businesses",
     icon: FiBriefcase,
   },
-  {
-    title: "Teams",
-    href: "teams",
-    icon: FiUserPlus,
-  },
-  {
-    title: "Analytics",
-    href: "reports",
-    icon: FiPieChart,
-  },
-  {
-    title: "Settings",
-    href: "settings",
-    icon: FiActivity,
-  },
+  // {
+  //   title: "Teams",
+  //   href: "teams",
+  //   icon: FiUserPlus,
+  // },
+  // {
+  //   title: "Analytics",
+  //   href: "reports",
+  //   icon: FiPieChart,
+  // },
+  // {
+  //   title: "Settings",
+  //   href: "settings",
+  //   icon: FiActivity,
+  // },
 ];
 
 export default function PlatformNavigation() {
@@ -53,7 +54,7 @@ export default function PlatformNavigation() {
   // Function to check if a link is active
   const isActive = (href: string) => {
     const fullPath = `/merchant-portal/${merchantId}/platform/${href}`;
-    return pathname === fullPath || pathname.startsWith(`${fullPath}/`);
+    return pathname === fullPath || pathname?.startsWith(`${fullPath}/`);
   };
 
   // Function to generate the correct href
@@ -63,7 +64,8 @@ export default function PlatformNavigation() {
 
   return (
     <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-      <nav className="flex space-x-4 overflow-x-auto py-4">
+      <nav className="flex items-center justify-between py-4">
+        <div className="flex space-x-4 overflow-x-auto">
         {platformNavItems.map((item) => (
           <Link
             key={item.href}
@@ -79,6 +81,10 @@ export default function PlatformNavigation() {
             {item.title}
           </Link>
         ))}
+        </div>
+        <div className="flex items-center">
+          <NotificationDropdown />
+        </div>
       </nav>
     </div>
   );

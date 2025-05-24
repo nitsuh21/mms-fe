@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BusinessSwitcher } from "@/components/common/BusinessSwitcher";
 import { useTheme } from "@/context/ThemeContext";
-import { FiMoon, FiSun, FiBell, FiUser, FiSettings, FiLogOut, FiMenu } from "react-icons/fi";
+import { FiMenu, FiMoon, FiSun, FiUser, FiBell, FiLogOut, FiSettings } from "react-icons/fi";
+import NotificationDropdown from "./NotificationDropdown";
 import { useAuth } from "@/lib/auth/rbac";
 import { AuthService } from "@/services/authService";
 import { useParams } from "next/navigation";
@@ -76,12 +77,7 @@ export const Header = () => {
           </button>
 
           {/* Notifications */}
-          <button className="relative flex h-8.5 w-8.5 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <FiBell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-xs font-medium text-white dark:bg-brand-400">
-              4
-            </span>
-          </button>
+          <NotificationDropdown />
 
           {/* User Menu */}
           <div className="relative" ref={userMenuRef}>

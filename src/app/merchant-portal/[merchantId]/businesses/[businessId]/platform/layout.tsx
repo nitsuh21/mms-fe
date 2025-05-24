@@ -7,9 +7,6 @@ export default function PlatformLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const params = useParams();
-  const businessId = params.businessId as string;
-  const merchantId = params.merchantId as string;
 
   return (
     <div className="space-y-6">

@@ -20,15 +20,15 @@ export class NotificationService {
 
   private constructor() {
     this.api = axios.create({
-      baseURL: `${API_URL}/api/notifications/`,
+      baseURL: `${API_URL}/`,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
     // Add authentication interceptor
-    this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
+    this.api.interceptors.request.use((config: any) => {
+      const token = localStorage.getItem('accessToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -44,12 +44,12 @@ export class NotificationService {
   }
 
   async getNotifications(): Promise<Notification[]> {
-    const response = await this.api.get('');
+    const response = await this.api.get('notifications/');
     return response.data;
   }
 
   async getBusinessNotifications(businessId: string): Promise<Notification[]> {
-    const response = await this.api.get(`business/${businessId}/`);
+    const response = await this.api.get(`business/${businessId}/notifications/`);
     return response.data;
   }
 
@@ -61,25 +61,25 @@ export class NotificationService {
     business_id?: string;
     subscription_id?: string;
   }): Promise<Notification> {
-    const response = await this.api.post('', data);
+    const response = await this.api.post('notifications/', data);
     return response.data;
   }
 
   async markAsRead(notificationId: string): Promise<void> {
-    await this.api.patch(`${notificationId}/mark-as-read/`);
+    await this.api.patch(`notifications/${notificationId}/mark_as_read/`);
   }
 
   async markAllAsRead(): Promise<void> {
-    await this.api.post('mark-all-as-read/');
+    await this.api.post('notifications/mark_all_as_read/');
   }
 
   async getUnreadCount(): Promise<number> {
-    const response = await this.api.get('unread-count/');
+    const response = await this.api.get('notifications/unread_count/');
     return response.data.count;
   }
 
   async getBusinessUnreadCount(businessId: string): Promise<number> {
-    const response = await this.api.get(`business/${businessId}/unread-count/`);
+    const response = await this.api.get(`business/${businessId}/notifications/unread_count/`);
     return response.data.count;
   }
 }

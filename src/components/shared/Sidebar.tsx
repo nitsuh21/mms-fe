@@ -108,21 +108,21 @@ const platformNavItems: NavItem[] = [
     href: "platform/businesses",
     icon: FiBriefcase,
   },
-  {
-    title: "Teams",
-    href: "platform/teams",
-    icon: FiUserPlus,
-  },
-  {
-    title: "Analytics",
-    href: "platform/reports",
-    icon: FiPieChart,
-  },
-  {
-    title: "Platform Settings",
-    href: "platform/settings",
-    icon: FiActivity,
-  },
+  // {
+  //   title: "Teams",
+  //   href: "platform/teams",
+  //   icon: FiUserPlus,
+  // },
+  // {
+  //   title: "Analytics",
+  //   href: "platform/reports",
+  //   icon: FiPieChart,
+  // },
+  // {
+  //   title: "Platform Settings",
+  //   href: "platform/settings",
+  //   icon: FiActivity,
+  // },
 ];
 
 export function Sidebar() {
