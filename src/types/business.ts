@@ -9,6 +9,9 @@ export interface BusinessHours {
 }
 
 export interface Business {
+    location: string;
+    status: string;
+    contact_email: string;
     // Business Info
     id: string;
     name: string;
@@ -18,6 +21,7 @@ export interface Business {
     address: string;
     timezone: string;
     currency: string;
+  currency_symbol: string;
 
     // Media
     logo: string | null;

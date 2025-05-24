@@ -180,7 +180,7 @@ export const BusinessSwitcher = () => {
               
               <div className="border-t border-gray-200 p-2 dark:border-gray-600">
                 <Link
-                  href={`/merchant-portal/${merchantId}/platform/business/new`}
+                  href={`/merchant-portal/${merchantId}/platform/business/`}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
                   <FiPlus className="h-4 w-4" />
