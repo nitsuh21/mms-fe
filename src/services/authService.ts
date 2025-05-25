@@ -111,6 +111,18 @@ export class AuthService {
     )}`;
   }
 
+  static async updateProfile(data: any): Promise<UserData> {
+    try {
+      const response = await api.patch('/auth/profile/', data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error('Failed to update profile');
+    }
+  }
+
   static async handleGoogleCallback(code: string): Promise<AuthResponse> {
     try {
       const response = await api.post('/auth/google/', { 

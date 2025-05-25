@@ -325,7 +325,7 @@ export default function DashboardPage() {
           params.append('endDate', timeFilter.endDate.toISOString().split('T')[0]);
         }
 
-        const response = await api.get(`/api/subscriptions/dashboard/${businessId}/?${params.toString()}`);
+        const response = await api.get(`/subscriptions/dashboard/${businessId}/?${params.toString()}`);
         if (response.data.success) {
           const { metrics, topPlans, recentMembers } = response.data.data;
           

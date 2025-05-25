@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FiSave } from "react-icons/fi";
-import { authService } from "@/services/authService";
+import { AuthService } from "@/services/authService";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, ROUTES } from "@/config";
 
@@ -24,7 +24,7 @@ export default function PlatformSettingsPage() {
 
   useEffect(() => {
     // Get tab from URL if available
-    const tabParam = searchParams.get('tab');
+    const tabParam = searchParams?.get('tab');
     if (tabParam && ['general', 'account', 'branding', 'billing', 'notifications', 'security', 'integrations', 'logout'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
@@ -34,13 +34,13 @@ export default function PlatformSettingsPage() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const userData = await authService.getCurrentUser();
+        const userData = await AuthService.getCurrentUser();
         setProfileData({
           ...profileData,
-          first_name: userData.first_name || "",
-          last_name: userData.last_name || "",
-          email: userData.email || "",
-          phone: userData.phone || "",
+          first_name: userData?.first_name || "",
+          last_name: userData?.last_name || "",
+          email: userData?.email || "",
+          phone: userData?.phone || "",
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -89,7 +89,7 @@ export default function PlatformSettingsPage() {
         updateData.new_password = profileData.new_password;
       }
 
-      const result = await authService.updateProfile(updateData);
+      const result = await AuthService.updateProfile(updateData);
       setMessage({ type: "success", text: "Profile updated successfully" });
     } catch (error: any) {
       setMessage({ 
@@ -105,7 +105,7 @@ export default function PlatformSettingsPage() {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    router.push(ROUTES.LOGIN);
+    router.push(ROUTES.SIGN_IN);
   };
 
   const renderTabContent = () => {

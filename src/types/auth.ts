@@ -22,6 +22,7 @@ export interface UserData {
     email: string;
     first_name: string;
     last_name: string;
+    phone: string;
     role: 'PA' | 'TA' | 'TS' | 'CU';  // Platform Admin, Tenant Admin, Tenant Staff, Customer
 }
 
