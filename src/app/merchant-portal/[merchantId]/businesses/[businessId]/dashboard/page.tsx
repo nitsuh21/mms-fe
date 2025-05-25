@@ -16,43 +16,6 @@ interface TimeFilter {
   endDate?: Date;
 }
 
-interface ApiMetrics {
-  members: {
-    total: number;
-    active: number;
-    newThisMonth: number;
-    growthPercent: number;
-  };
-  subscriptions: {
-    total: number;
-    active: number;
-    trial: number;
-    growthPercent: number;
-  };
-  revenue: {
-    totalRevenue: number;
-    mrr: number;
-    growthPercent: number;
-  };
-  performance: {
-    performancePercent: number;
-    churnRate: number;
-    arpu: number;
-    growthPercent: number;
-  };
-  renewals: {
-    total: number;
-    thisMonth: number;
-    nextMonth: number;
-    growthRate: number;
-  };
-  campaigns: {
-    total: number;
-    active: number;
-    draft: number;
-    growthPercent: number;
-  };
-}
 
 interface Subtitle {
   text: string;

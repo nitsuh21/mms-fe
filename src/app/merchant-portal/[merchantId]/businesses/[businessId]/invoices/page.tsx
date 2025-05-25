@@ -5,15 +5,14 @@ import { useParams } from 'next/navigation';
 import { useNotification } from '@/context/NotificationContext';
 import { Invoice } from '@/types/invoice';
 import { invoiceService } from '@/services/invoiceService';
-import { FiRefreshCw, FiPlus, FiDollarSign, FiCreditCard } from 'react-icons/fi';
+import { FiPlus } from 'react-icons/fi';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { PaymentModal } from '@/components/invoices/PaymentModal';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 
 export default function InvoicesPage() {
-  const params = useParams() as { businessId: string; merchantId: string };
+  const params = useParams() as { businessId: string};
   const businessId = params.businessId;
-  const merchantId = params.merchantId;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

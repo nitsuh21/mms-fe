@@ -5,6 +5,7 @@ import { FiSave } from "react-icons/fi";
 import { AuthService } from "@/services/authService";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, ROUTES } from "@/config";
+import { UserData } from "@/types/auth";
 
 export default function PlatformSettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
@@ -34,7 +35,7 @@ export default function PlatformSettingsPage() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const userData = await AuthService.getCurrentUser();
+        const userData: UserData | null = await AuthService.getCurrentUser();
         setProfileData({
           ...profileData,
           first_name: userData?.first_name || "",
