@@ -1,15 +1,16 @@
 import React from 'react';
 import { Controller } from 'react-hook-form';
-import { Input } from './Form/InputField';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'flatpickr/dist/themes/material_blue.css';
+import { RegisterOptions, UseFormReturn } from 'react-hook-form';
+import { FieldValues } from 'react-hook-form';
 
 interface DatePickerProps {
   name: string;
   label: string;
-  rules?: any;
-  methods: any;
+  rules?: RegisterOptions;
+  methods: UseFormReturn<FieldValues>;
   className?: string;
   placeholder?: string;
   description?: string;
@@ -70,7 +71,7 @@ export function DatePicker({
                 dateFormat: 'Y-m-d H:i',
                 time_24hr: true,
                 allowInput: true,
-                defaultDate: value ? new Date(value) : null,
+                defaultDate: value ? new Date(value) : undefined,
                 enable: [(date) => date >= new Date()],
               }}
               className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white sm:text-sm ${

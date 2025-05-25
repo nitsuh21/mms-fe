@@ -213,10 +213,18 @@ export class SubscriptionService {
 
   // Helper function to convert invoice numeric fields
   private convertInvoice(invoice: Record<string, any>): Invoice {
+    const customerName = invoice.subscription?.customer ? 
+      `${invoice.subscription.customer.first_name} ${invoice.subscription.customer.last_name}`.trim() : 
+      'Unknown Customer';
+    
+    const customerEmail = invoice.subscription?.customer?.email || 'No Email';
+
     return {
-      ...invoice,
       id: invoice.id,
+      invoice_number: invoice.invoice_number || `INV-${invoice.id}`,
       subscription: invoice.subscription,
+      customer_name: customerName,
+      customer_email: customerEmail,
       payment_method: invoice.payment_method,
       status: invoice.status,
       due_date: invoice.due_date,
@@ -233,7 +241,7 @@ export class SubscriptionService {
     try {
       const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/invoices/`);
       const invoices = response.data.results || [];
-      return invoices.map(invoice => this.convertInvoice(invoice));
+      return invoices.map((invoice: any) => this.convertInvoice(invoice));
     } catch (error) {
       console.error('Error fetching subscription invoices:', error);
       throw error;

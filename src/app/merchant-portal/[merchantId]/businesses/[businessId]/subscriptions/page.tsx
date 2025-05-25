@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Subscription, subscriptionService } from '@/services/subscriptionService';
 import { Customer, customerService } from '@/services/customerService';
 import { Plan, PlanService } from '@/services/planService';
@@ -10,11 +10,6 @@ import { FiCalendar } from 'react-icons/fi';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-interface Notification {
-  type: 'success' | 'error';
-  title: string;
-  message: string;
-}
 
 interface Payment {
   id: number;
@@ -179,24 +174,31 @@ function SubscriptionsContent() {
   if (!params) {
     return <div>Error: Missing parameters</div>;
   }
-  
+
+  const { addNotification } = useNotification();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [showAddSubscription, setShowAddSubscription] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  const [editSubscriptionData, setEditSubscriptionData] = useState<EditSubscriptionData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'AC' | 'PD' | 'CN' | 'TR' | 'EX'>('all');
   const [showDetails, setShowDetails] = useState<number | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showAddSubscription, setShowAddSubscription] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [editSubscriptionData, setEditSubscriptionData] = useState<EditSubscriptionData | null>(null);
+  // Define form data type to ensure type safety
+  type SubscriptionFormData = {
+    business: number;
+    plan_id: number;
+    customer_id: number;
+    start_date: string;
+    use_trial: boolean;
+  };
 
-  const { addNotification } = useNotification();
-
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SubscriptionFormData>({
     business: Number(params.businessId),
     plan_id: 0,
     customer_id: 0,
@@ -295,9 +297,8 @@ function SubscriptionsContent() {
     }
   };
 
-  const handleUpdateSubscription = async (e: React.FormEvent) => {
+  const handleUpdateSubscription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!editingSubscription || !editSubscriptionData) return;
 
     try {
@@ -318,12 +319,13 @@ function SubscriptionsContent() {
         title: 'Success',
         message: 'Subscription updated successfully',
       });
-    } catch (err: any) {
-      console.error('Error updating subscription:', err);
+    } catch (error: unknown) {
+      console.error('Error updating subscription:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update subscription';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: err.message || 'Failed to update subscription',
+        message: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -388,37 +390,48 @@ function SubscriptionsContent() {
           ? `Trial subscription created. Trial ends on ${new Date(trialEndDate!).toLocaleDateString()}`
           : 'Subscription created successfully'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create subscription';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: error.response?.data?.detail || error.message || 'Failed to create subscription'
+        message: errorMessage
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const createNewSubscription = async (data: any) => {
+  const createNewSubscription = async (data: EditSubscriptionData) => {
     const selectedPlan = plans.find(p => p.id === data.plan_id);
     if (!selectedPlan) {
       throw new Error('Selected plan not found');
     }
 
+    // Validate required fields
+    if (!data.plan_id || !data.customer_id || !data.start_date) {
+      throw new Error('Plan ID, Customer ID, and Start Date are required');
+    }
+
     const startDate = data.start_date;
-    const endDate = calculateEndDate(startDate, selectedPlan, data.use_trial);
-    const trialEndDate = data.use_trial ? calculateTrialEndDate(startDate, selectedPlan) : null;
-    const nextBillingDate = calculateNextBillingDate(startDate, selectedPlan, data.use_trial);
+    const endDate = calculateEndDate(startDate, selectedPlan, Boolean(data.use_trial));
+    const trialEndDate = data.use_trial ? calculateTrialEndDate(startDate, selectedPlan) : undefined;
+    const nextBillingDate = calculateNextBillingDate(startDate, selectedPlan, Boolean(data.use_trial));
     
     const initialStatus = 'PE';  // Always start with Pending status
 
+
+
     const newSubscription = await subscriptionService.createSubscription({
-      ...data,
+      plan_id: data.plan_id,
+      customer_id: data.customer_id,
       business: Number(params.businessId),
+      start_date: startDate,
       end_date: endDate,
       trial_end: trialEndDate,
       next_billing_date: nextBillingDate,
-      status: initialStatus
+      status: initialStatus,
+      use_trial: Boolean(data.use_trial)
     });
 
     setSubscriptions(prev => [...prev, newSubscription]);
@@ -484,12 +497,13 @@ function SubscriptionsContent() {
         title: 'Success',
         message: 'Subscription cancelled successfully',
       });
-    } catch (err: any) {
-      console.error('Error cancelling subscription:', err);
+    } catch (error: unknown) {
+      console.error('Error cancelling subscription:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel subscription';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: err.message || 'Failed to cancel subscription',
+        message: errorMessage,
       });
     } finally {
       setLoading(false);

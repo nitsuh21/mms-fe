@@ -1,4 +1,4 @@
-import { FieldValues, UseFormReturn, Path } from 'react-hook-form';
+import { FieldValues, UseFormReturn, Path, RegisterOptions } from 'react-hook-form';
 import React from 'react';
 
 type Option = {
@@ -11,7 +11,7 @@ export interface SelectFieldProps<T extends FieldValues> {
   label: string;
   description?: string;
   options: Option[];
-  rules?: any;
+  rules?: RegisterOptions<T, Path<T>>;
   methods: UseFormReturn<T>;
   disabled?: boolean;
 }

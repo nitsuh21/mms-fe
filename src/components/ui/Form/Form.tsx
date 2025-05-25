@@ -1,9 +1,9 @@
-import { useForm, SubmitHandler, FieldValues } from 'react-hook-form';
+import { useForm, SubmitHandler, FieldValues, UseFormReturn } from 'react-hook-form';
 import { ReactNode } from 'react';
 
 interface FormProps<T extends FieldValues> {
   onSubmit: SubmitHandler<T>;
-  children: (methods: any) => ReactNode;
+  children: (methods: UseFormReturn<T>) => ReactNode;
   className?: string;
 }
 

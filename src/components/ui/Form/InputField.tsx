@@ -1,4 +1,3 @@
-import { FieldErrors, UseFormRegister } from 'react-hook-form';
 
 interface InputFieldProps {
   name: string;
