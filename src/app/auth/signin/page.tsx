@@ -162,7 +162,7 @@ export default function SignInPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
 
-            <div className="relative py-3">
+             {/* <div className="relative py-3">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
               </div>
@@ -195,7 +195,7 @@ export default function SignInPage() {
                 />
               </svg>
               Sign in with Google
-            </button>
+            </button> */}
           </div>
         </form>
       </div>
