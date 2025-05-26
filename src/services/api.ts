@@ -1,17 +1,23 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { API_URL } from '@/config';
 import { AuthService } from './authService';
 
-const API_BASE_URL = API_URL || 'http://localhost:8000/api/';
-//const API_BASE_URL = API_URL || 'https://mms-be-hqt1.onrender.com/api/'
+// API base URL from environment variables
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+// Ensure the API URL ends with a slash
+const normalizedApiUrl = API_BASE_URL.endsWith('/') 
+  ? API_BASE_URL + 'api/'
+  : API_BASE_URL + '/api/';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: normalizedApiUrl,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json','Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
   },
   // Enable sending cookies with requests
-  withCredentials: true,
+  withCredentials: false,
   timeout: 10000,
 });
 
