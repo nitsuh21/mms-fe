@@ -1,17 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/hooks";
-
 export default function MerchantPortalRedirect() {
-  const router = useRouter();
   // const { user  }  = useAuth();
 
   // useEffect(() => {
   //   if (user) {
   //     // Redirect to the merchant's dashboard
-  //     router.push(`/merchant-portal/${user.id}/dashboard`);
   //   }
   // }, [user, router]);
 

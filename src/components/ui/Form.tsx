@@ -103,7 +103,6 @@ export function SelectField<TFormValues extends FieldValues>({
   name,
   label,
   options,
-  value,
   rules,
   methods,
   className = '',

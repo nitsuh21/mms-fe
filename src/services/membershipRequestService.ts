@@ -1,4 +1,4 @@
-import { MembershipRequest, MembershipRequestFilter, MembershipRequestStatus } from '../types/membershipRequest';
+import { MembershipRequest, MembershipRequestStatus } from '../types/membershipRequest';
 import api from './api'
 
 export class MembershipRequestService {

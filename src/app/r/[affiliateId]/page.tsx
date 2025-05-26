@@ -48,12 +48,6 @@ type ActivityMetadata = {
   url?: string;
 };
 
-type ActivityPayload = {
-  affiliate_id: string;
-  activity_type: ActivityType;
-  metadata?: ActivityMetadata;
-};
-
 export default function BusinessLandingPage() {
   const { affiliateId } = useParams() as { affiliateId: string };
 

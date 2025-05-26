@@ -3,26 +3,9 @@
 import { useState, useEffect, use } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNotification } from '@/context/NotificationContext';
-import { FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiCheck } from 'react-icons/fi';
 import { PlanService, Plan, CreatePlanData, UpdatePlanData, Discount } from '@/services/planService';
 import { discountsService } from '@/services/discounts';
-import api from '@/services/api';
-import type { Metadata } from 'next';
-
-const calculateDiscountedPrice = (originalPrice: number, discounts?: Discount[]): number => {
-  if (!discounts?.length) return originalPrice;
-  
-  // Find the first active discount
-  const activeDiscount = discounts.find(d => d.is_active);
-  if (!activeDiscount) return originalPrice;
-
-  // Calculate the discounted price based on discount type
-  if (activeDiscount.discount_type === 'P') {
-    return originalPrice * (1 - Number(activeDiscount.discount_value) / 100);
-  } else {
-    return originalPrice - Number(activeDiscount.discount_value);
-  }
-};
 
 interface PlanFormData {
   name?: string;
@@ -31,11 +14,10 @@ interface PlanFormData {
   discounted_price?: number;
   currency?: string;
   interval?: 'D' | 'W' | 'M' | 'Y';
-  grace_period_days?: number;
   trial_days?: number;
-  has_trial?: boolean;
   features?: string;
   is_active?: boolean | string;
+  grace_period_days?: number;
 }
 
 export default function PlansPage({ params }: { params: { businessId: string } }) {
@@ -47,7 +29,6 @@ export default function PlansPage({ params }: { params: { businessId: string } }
   const [showAddPlan, setShowAddPlan] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<number | null>(null);
   const [showRemoveDiscountModal, setShowRemoveDiscountModal] = useState(false);
@@ -61,10 +42,10 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       discounted_price: 0,
       currency: 'ETB',
       interval: 'M',
-      grace_period_days: 0,
       trial_days: 0,
       features: '',
-      is_active: true
+      is_active: true,
+      grace_period_days: 0
     },
     resolver: (data) => {
       // Convert features from textarea to string
@@ -77,9 +58,8 @@ export default function PlansPage({ params }: { params: { businessId: string } }
           price: Number(data.price),
           discounted_price: Number(data.discounted_price), 
           trial_days: Number(data.trial_days),
-          grace_period_days: Number(data.grace_period_days),
-          has_trial: data.trial_days ? data.trial_days > 0 : false,
-          is_active: typeof data.is_active === 'string' ? data.is_active === 'true' : data.is_active
+          is_active: typeof data.is_active === 'string' ? data.is_active === 'true' : data.is_active,
+          grace_period_days: Number(data.grace_period_days)
         },
         errors: {}
       };
@@ -99,9 +79,9 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         currency: selectedPlan.currency,
         interval: selectedPlan.interval,
         trial_days: Number(selectedPlan.trial_days),
-        grace_period_days: Number(selectedPlan.grace_period_days),
         features: featuresString,
         is_active: selectedPlan.is_active,
+        grace_period_days: Number(selectedPlan.grace_period_days)
       });
     } else {
       methods.reset({
@@ -112,9 +92,9 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         currency: 'ETB',
         interval: 'M',
         trial_days: 0,
-        grace_period_days: 0,
         features: '',
         is_active: true,
+        grace_period_days: 0
       });
     }
   }, [selectedPlan, methods]);
@@ -122,7 +102,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
   useEffect(() => {
     loadPlans();
     loadDiscounts();
-  }, []);
+  }, [businessId]);
 
   const loadPlans = async () => {
     try {
@@ -234,7 +214,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         message: 'Discount connected successfully',
       });
       setShowDiscountModal(false);
-      setSelectedDiscount(null);
+    
       setShowAddPlan(false); // Close edit modal
       setSelectedPlan(null); // Clear selected plan
       loadPlans(); // Refresh the plans list
@@ -246,7 +226,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
         message: 'Failed to connect discount',
       });
       setShowDiscountModal(false);
-      setSelectedDiscount(null);
+    
       setShowAddPlan(false); // Close edit modal even on error
       setSelectedPlan(null); // Clear selected plan
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { FiPlus, FiEdit, FiTrash2, FiMail } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 import { useParams } from "next/navigation";
 import { teamService } from "@/services/teamService";
 import type { TeamMember } from "@/types/team";

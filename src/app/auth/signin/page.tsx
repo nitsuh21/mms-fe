@@ -45,17 +45,14 @@ export default function SignInPage() {
       } else {
         router.push('/merchant-portal/');
       }
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('Signin error:', err);
-      setError(err.message || 'Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = () => {
-    window.location.href = AuthService.getGoogleAuthUrl();
-  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
@@ -66,7 +63,7 @@ export default function SignInPage() {
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link
               href="/auth/signup"
               className="font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400"

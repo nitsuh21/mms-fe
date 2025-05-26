@@ -1,11 +1,13 @@
 
+import { UseFormReturn, RegisterOptions } from 'react-hook-form';
+
 interface InputFieldProps {
   name: string;
   label: string;
   placeholder?: string;
   type?: 'text' | 'number' | 'email' | 'password' | 'tel' | 'date';
-  rules?: any;
-  methods: any;
+  rules?: RegisterOptions;
+  methods: UseFormReturn<Record<string, unknown>>;
 }
 
 export function InputField({

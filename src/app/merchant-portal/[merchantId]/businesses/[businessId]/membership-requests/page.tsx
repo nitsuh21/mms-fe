@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useNotification } from '@/context/NotificationContext';
 import { MembershipRequest } from '@/types/membership';
@@ -14,7 +14,7 @@ export default function MembershipRequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { addNotification } = useNotification();
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     if (!businessId) {
       addNotification({
         type: 'error',
@@ -39,7 +39,7 @@ export default function MembershipRequestsPage() {
       setRequests([]);
       setIsLoading(false);
     }
-  };
+  }, [businessId, addNotification]);
 
   const handleApproveRequest = async (requestId: number) => {
     try {

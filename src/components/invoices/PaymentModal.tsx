@@ -1,19 +1,9 @@
 import { Invoice } from '@/types/invoice';
 import { CreatePaymentData, PaymentType } from '@/types/payment';
 
-import { FiDollarSign, FiCreditCard } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
 import { useState } from 'react';
-import { PaymentList } from '@/components/invoices/PaymentList';
-
-const paymentMethods = [
-  { value: 'CA', label: 'Cash' },
-  { value: 'TB', label: 'Telebirr' },
-  { value: 'CB', label: 'CBE' },
-  { value: 'CP', label: 'Coop' },
-  { value: 'AG', label: 'Payment Aggregator' },
-] as const;
 
 const paymentTypes = [
   { value: 'base', label: 'Regular Payment' },
@@ -89,7 +79,6 @@ export function PaymentModal({ invoice, isOpen, onClose, onRefresh }: PaymentMod
       });
 
       // Update invoice status
-      const updatedInvoice = await invoiceService.getInvoice(invoice.id);
       onRefresh();
 
       addNotification({

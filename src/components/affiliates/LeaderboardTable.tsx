@@ -1,8 +1,7 @@
 import { LeaderboardEntry, affiliateService } from "@/services/affiliateService";
 import { Button } from "@/components/ui";
 import { useState } from "react";
-import { format } from "date-fns";
-import { FiChevronLeft, FiChevronRight, FiGift, FiXCircle, FiAward } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiXCircle, FiAward } from "react-icons/fi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

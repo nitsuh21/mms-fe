@@ -3,13 +3,10 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { FiPlus, FiEye, FiEdit2, FiTrash2 } from "react-icons/fi";
-import { IoExpandOutline } from "react-icons/io5";
-
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 import { Business } from "@/types/business";
-import router from "next/router";
 
 interface PaginatedResponse {
   count: number;
@@ -142,7 +139,7 @@ export default function PlatformBusinessesPage() {
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{business.email}</p>
             </div>
             <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{business.owner?.name || 'N/A'}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">N/A</p>
             </div>
             <div className="col-span-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">{business.location || 'N/A'}</p>
@@ -160,26 +157,19 @@ export default function PlatformBusinessesPage() {
             <div className="col-span-2 text-right">
               <div className="flex items-center justify-end space-x-2">
                 <Link
-                  href={`/merchant-portal/${merchantId}/businesses/${business.id}/dashboard`}
+                  href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}`}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                   title="View details"
                 >
-                  <IoExpandOutline className="h-4 w-4" />
+                  <FiEye className="h-4 w-4" />
                 </Link>
                 <Link
                   href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}/edit`}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                  title="Expand In"
+                  title="Edit"
                 >
                   <FiEdit2 className="h-4 w-4" />
                 </Link>
-                {/* <Link
-                  href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}/edit`}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                  title="Edit business"
-                >
-                  <FiEdit2 className="h-4 w-4" />
-                </Link> */}
                 <button
                   onClick={() => {
                     setSelectedBusiness(business);

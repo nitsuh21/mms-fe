@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { FiArrowLeft, FiUserPlus, FiLink, FiEdit2, FiTrash2, FiGift, FiActivity } from "react-icons/fi";
+import { FiArrowLeft, FiEdit2, FiTrash2, FiActivity } from "react-icons/fi";
 import { ParticipantsTable } from "@/components/affiliates/ParticipantsTable";
 import { LeaderboardTable } from "@/components/affiliates/LeaderboardTable";
 import { ActivitiesTable } from "@/components/affiliates/ActivitiesTable";
@@ -33,10 +33,6 @@ export default function CampaignDetailsPage() {
   const [isAddMarketerModalOpen, setIsAddMarketerModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isAddRewardModalOpen, setIsAddRewardModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState<Partial<Campaign>>({});
-  const [rewardFormData, setRewardFormData] = useState<Partial<CampaignReward>>({});
-
   const { data: campaign, isLoading: isCampaignLoading } = useQuery<Campaign>({
     queryKey: ["campaign", campaignId],
     queryFn: () => affiliateService.getCampaign(Number(campaignId)),
@@ -64,42 +60,10 @@ export default function CampaignDetailsPage() {
       await affiliateService.deleteCampaign(Number(campaignId));
       console.log('Campaign deleted successfully');
       window.location.href = `/merchant-portal/${merchantId}/businesses/${businessId}/affiliates`;
-    } catch (error) {
+    } catch {
       console.error('Failed to delete campaign');
     }
   }, [campaignId, merchantId, businessId]);
-
-  const handleEditSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await affiliateService.updateCampaign(Number(campaignId), editFormData);
-      setIsEditModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
-    } catch (error) {
-      console.error('Failed to update campaign');
-    }
-  }, [campaignId, editFormData, queryClient]);
-
-  const handleRewardSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const selectedParticipant = leaderboard?.find(entry => String(entry.participant.id) === String(rewardFormData.participant));
-      if (!selectedParticipant) {
-        console.error('Selected participant not found');
-        return;
-      }
-      await affiliateService.createReward({
-        ...rewardFormData,
-        campaign: Number(campaignId),
-        total_points: selectedParticipant.total_points,
-        status: 'PENDING',
-      });
-      setIsAddRewardModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
-    } catch (error) {
-      console.error('Failed to create reward');
-    }
-  }, [campaignId, rewardFormData, leaderboard, queryClient]);
 
   if (isCampaignLoading) {
     return (
@@ -405,47 +369,6 @@ export default function CampaignDetailsPage() {
         }}
         campaignId={Number(campaignId)}
       />
-
-      {/* Add Reward Modal */}
-      {/* <Dialog open={isAddRewardModalOpen} onOpenChange={setIsAddRewardModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Reward</DialogTitle>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleRewardSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Participant</label>
-              <select 
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                onChange={(e) => setRewardFormData({ ...rewardFormData, participant: Number(e.target.value) })}
-              >
-                <option value="">Select a participant</option>
-                {leaderboard?.map(entry => (
-                  <option key={entry.participant.id} value={entry.participant.id}>
-                    {entry.participant.username} ({entry.total_points} points)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Amount (Birr)</label>
-              <input
-                type="number"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                onChange={(e) => setRewardFormData({ ...rewardFormData, reward_amount: Number(e.target.value) })}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddRewardModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add Reward
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog> */}
     </div>
   );
 }

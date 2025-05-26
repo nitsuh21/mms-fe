@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Subscription, subscriptionService } from '@/services/subscriptionService';
+import { Subscription, subscriptionService, CreateSubscriptionData } from '@/services/subscriptionService';
 import { Customer, customerService } from '@/services/customerService';
 import { Plan, PlanService } from '@/services/planService';
 import { XIcon } from '@/components/icons';
@@ -133,7 +133,7 @@ const calculateNextBillingDate = (startDate: string, plan: Plan, useTrial: boole
   }
 };
 
-const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = false): string => {
+const calculateEndDate = (startDate: string, plan: Plan): string => {
   try {
     const date = new Date(startDate);
     
@@ -169,79 +169,62 @@ const calculateEndDate = (startDate: string, plan: Plan, useTrial: boolean = fal
   }
 };
 
+interface SubscriptionFormData {
+  business: number;
+  plan_id: number;
+  customer_id: number;
+  start_date: string;
+  use_trial: boolean;
+}
+
 function SubscriptionsContent() {
   const params = useParams() as { businessId: string; merchantId: string } | null;
-  if (!params) {
-    return <div>Error: Missing parameters</div>;
-  }
-
   const { addNotification } = useNotification();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [showAddSubscription, setShowAddSubscription] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  // Payment history state management will be implemented in future updates
+  const [editSubscriptionData, setEditSubscriptionData] = useState<EditSubscriptionData | null>(null);
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'AC' | 'PD' | 'CN' | 'TR' | 'EX'>('all');
-  const [showDetails, setShowDetails] = useState<number | null>(null);
-  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
-  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showAddSubscription, setShowAddSubscription] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  const [editSubscriptionData, setEditSubscriptionData] = useState<EditSubscriptionData | null>(null);
-  // Define form data type to ensure type safety
-  type SubscriptionFormData = {
-    business: number;
-    plan_id: number;
-    customer_id: number;
-    start_date: string;
-    use_trial: boolean;
-  };
-
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formData, setFormData] = useState<SubscriptionFormData>({
-    business: Number(params.businessId),
+    business: Number(params?.businessId),
     plan_id: 0,
     customer_id: 0,
     start_date: new Date().toISOString().split('T')[0],
     use_trial: false
   });
 
+  if (!params?.businessId) {
+    return <div>Loading...</div>;
+  }
+
   const filteredSubscriptions = useMemo(() => {
-    return subscriptions.filter(sub => {
-      let matches = true;
-
-      // Search filter
-      if (searchQuery.trim()) {
-        const searchTerms = searchQuery.toLowerCase().trim();
-        const customerName = `${sub.customer.first_name} ${sub.customer.last_name}`.toLowerCase();
-        const customerEmail = sub.customer.email.toLowerCase();
-        const planName = sub.plan.name.toLowerCase();
-        const status = getStatusLabel(sub.status).toLowerCase();
-        
-        matches = customerName.includes(searchTerms) ||
-                 customerEmail.includes(searchTerms) ||
-                 planName.includes(searchTerms) ||
-                 status.includes(searchTerms);
-      }
-
-      // Status filter
-      if (matches && statusFilter !== 'all') {
-        matches = sub.status === statusFilter;
-      }
-
-      return matches;
+    return subscriptions.filter((subscription) => {
+      const customerName = `${subscription.customer.first_name} ${subscription.customer.last_name}`.toLowerCase();
+      const matchesSearch = customerName.includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || subscription.status === statusFilter;
+      return matchesSearch && matchesStatus;
     });
   }, [subscriptions, searchQuery, statusFilter]);
 
   useEffect(() => {
-    loadSubscriptions();
-    loadCustomers();
-    loadPlans();
-  }, [params.businessId]);
+    if (params?.businessId) {
+      loadSubscriptions();
+      loadCustomers();
+      loadPlans();
+    }
+  }, [params?.businessId]);
 
   const loadSubscriptions = async () => {
     try {
-      const response = await subscriptionService.getSubscriptions(params.businessId);
+      const response = await subscriptionService.getSubscriptions(params?.businessId);
       setSubscriptions(response);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
@@ -264,6 +247,8 @@ function SubscriptionsContent() {
         title: 'Error',
         message: 'Failed to load payment history'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -275,9 +260,9 @@ function SubscriptionsContent() {
     try {
       setLoading(true);
       const updatedSubscription = await subscriptionService.convertTrialToActive(subscriptionId);
-      setSubscriptions(prevSubscriptions =>
-        prevSubscriptions.map(sub =>
-          sub.id === subscriptionId ? updatedSubscription : sub
+      setSubscriptions((prevSubscriptions) =>
+        prevSubscriptions.map((sub) =>
+          Number(sub.id) === subscriptionId ? updatedSubscription : sub
         )
       );
       addNotification({
@@ -344,7 +329,7 @@ function SubscriptionsContent() {
         throw new Error('Please fill in all required fields');
       }
 
-      const selectedPlan = plans.find(p => p.id === formData.plan_id);
+      const selectedPlan = plans.find((p) => p.id === formData.plan_id);
       if (!selectedPlan) {
         throw new Error('Selected plan not found');
       }
@@ -367,19 +352,21 @@ function SubscriptionsContent() {
       // Calculate dates
       const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
       const nextBillingDate = useTrial && trialEndDate ? trialEndDate : formData.start_date; // If trial, first billing is at trial end
-      const endDate = calculateEndDate(useTrial && trialEndDate ? trialEndDate : formData.start_date, selectedPlan, false); // End date starts after trial
+      const endDate = calculateEndDate(useTrial && trialEndDate ? trialEndDate : formData.start_date, selectedPlan); // End date starts after trial
       
-      const newSubscription = await subscriptionService.createSubscription({
+      const subscriptionData: CreateSubscriptionData = {
         ...formData,
         business: Number(params.businessId),
         end_date: endDate,
-        trial_end: trialEndDate,
+        trial_end: trialEndDate || undefined, // Convert null to undefined if needed
         next_billing_date: nextBillingDate,
         status: useTrial ? 'TR' : 'AC', // Trial status if using trial
         use_trial: useTrial
-      });
+      };
 
-      setSubscriptions(prev => [...prev, newSubscription]);
+      const newSubscription = await subscriptionService.createSubscription(subscriptionData);
+
+      setSubscriptions((prev: Subscription[]) => [...prev, newSubscription]);
       setShowAddSubscription(false);
       resetFormData();
       
@@ -401,50 +388,6 @@ function SubscriptionsContent() {
       setLoading(false);
     }
   };
-
-  const createNewSubscription = async (data: EditSubscriptionData) => {
-    const selectedPlan = plans.find(p => p.id === data.plan_id);
-    if (!selectedPlan) {
-      throw new Error('Selected plan not found');
-    }
-
-    // Validate required fields
-    if (!data.plan_id || !data.customer_id || !data.start_date) {
-      throw new Error('Plan ID, Customer ID, and Start Date are required');
-    }
-
-    const startDate = data.start_date;
-    const endDate = calculateEndDate(startDate, selectedPlan, Boolean(data.use_trial));
-    const trialEndDate = data.use_trial ? calculateTrialEndDate(startDate, selectedPlan) : undefined;
-    const nextBillingDate = calculateNextBillingDate(startDate, selectedPlan, Boolean(data.use_trial));
-    
-    const initialStatus = 'PE';  // Always start with Pending status
-
-
-
-    const newSubscription = await subscriptionService.createSubscription({
-      plan_id: data.plan_id,
-      customer_id: data.customer_id,
-      business: Number(params.businessId),
-      start_date: startDate,
-      end_date: endDate,
-      trial_end: trialEndDate,
-      next_billing_date: nextBillingDate,
-      status: initialStatus,
-      use_trial: Boolean(data.use_trial)
-    });
-
-    setSubscriptions(prev => [...prev, newSubscription]);
-    addNotification({
-      type: 'success',
-      title: 'Success',
-      message: 'Subscription created successfully'
-    });
-
-    setShowAddSubscription(false);
-    resetFormData();
-  };
-
 
 
   const handleEditSubscription = (subscription: Subscription) => {
@@ -471,7 +414,7 @@ function SubscriptionsContent() {
   const handleDeleteSubscription = async (id: number) => {
     try {
       await subscriptionService.deleteSubscription(id);
-      setSubscriptions(subscriptions.filter(sub => sub.id !== id));
+      setSubscriptions(subscriptions.filter((sub) => Number(sub.id) !== id));
       addNotification({
         type: 'success',
         title: 'Success',
@@ -543,7 +486,7 @@ function SubscriptionsContent() {
     if (selectedPlan) {
       // If plan has trial, automatically enable it
       const useTrial = selectedPlan.has_trial && selectedPlan.trial_days > 0;
-      const endDate = calculateEndDate(formData.start_date, selectedPlan, useTrial);
+      const endDate = calculateEndDate(formData.start_date, selectedPlan);
       const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, selectedPlan) : undefined;
       
       setFormData(prev => ({
@@ -691,7 +634,7 @@ function SubscriptionsContent() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteSubscription(sub.id)}
+                          onClick={() => handleDeleteSubscription(Number(sub.id))}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
@@ -706,7 +649,7 @@ function SubscriptionsContent() {
                         )}
                         {sub.status === 'TR' && (
                           <button
-                            onClick={() => handleConvertTrial(sub.id)}
+                            onClick={() => handleConvertTrial(Number(sub.id))}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             Convert to Active
@@ -723,7 +666,7 @@ function SubscriptionsContent() {
       </div>
 
       {/* Subscription Details Modal */}
-      {showDetails && selectedSubscription && (
+      {selectedSubscription && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
           <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-gray-900 rounded-lg p-6 w-full max-w-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
             <div className="flex justify-between items-center mb-4">
@@ -732,7 +675,7 @@ function SubscriptionsContent() {
               </h2>
               <button
                 onClick={() => {
-                  setShowDetails(null);
+                  setSelectedSubscription(null);
                   setSelectedSubscription(null);
                 }}
                 className="text-gray-500 hover:text-gray-700"
@@ -804,7 +747,7 @@ function SubscriptionsContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                          {paymentHistory.map((payment) => (
+                          {paymentHistory.map((payment: Payment) => (
                             <tr key={payment.id}>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                 {new Date(payment.created_at).toLocaleDateString()}
@@ -899,7 +842,7 @@ function SubscriptionsContent() {
                     if (selectedPlan) {
                       if (editMode) {
                         const startDate = editSubscriptionData?.start_date || editingSubscription?.start_date;
-                        const endDate = calculateEndDate(startDate!, selectedPlan, editSubscriptionData?.use_trial);
+                        const endDate = calculateEndDate(startDate!, selectedPlan);
                         const trialEndDate = editSubscriptionData?.use_trial ? calculateTrialEndDate(startDate!, selectedPlan) : null;
                         setEditSubscriptionData(prev => ({
                           ...prev!,
@@ -911,7 +854,7 @@ function SubscriptionsContent() {
                       } else {
                         const startDate = formData.start_date;
                         const useTrial = selectedPlan.has_trial && formData.use_trial;
-                        const endDate = calculateEndDate(startDate, selectedPlan, useTrial);
+                        const endDate = calculateEndDate(startDate, selectedPlan);
                         const trialEndDate = useTrial ? calculateTrialEndDate(startDate, selectedPlan) : undefined;
                         
                         setFormData(prev => ({
@@ -976,7 +919,7 @@ function SubscriptionsContent() {
                       const newStartDate = e.target.value;
                       const selectedPlan = plans.find(p => p.id === formData.plan_id);
                       if (selectedPlan) {
-                        const endDate = calculateEndDate(newStartDate, selectedPlan, formData.use_trial);
+                        const endDate = calculateEndDate(newStartDate, selectedPlan);
                         const trialEndDate = formData.use_trial ? calculateTrialEndDate(newStartDate, selectedPlan) : undefined;
                         setFormData(prev => ({
                           ...prev,
@@ -999,7 +942,7 @@ function SubscriptionsContent() {
                   </label>
                   <select
                     value={editSubscriptionData?.status || ''}
-                    onChange={(e) => setEditSubscriptionData(prev => ({ ...prev!, status: e.target.value as any }))}
+                    onChange={(e) => setEditSubscriptionData((prev: EditSubscriptionData | null) => ({ ...prev!, status: e.target.value as any }))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
                   >
                     <option value="AC">Active</option>
@@ -1021,7 +964,7 @@ function SubscriptionsContent() {
                       const useTrial = e.target.checked;
                       const plan = plans.find(p => p.id === formData.plan_id);
                       if (plan) {
-                        const endDate = calculateEndDate(formData.start_date, plan, useTrial);
+                        const endDate = calculateEndDate(formData.start_date, plan);
                         const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, plan) : undefined;
                         setFormData(prev => ({
                           ...prev,

@@ -26,7 +26,7 @@ export default function InvoicesPage() {
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
-      const response = await invoiceService.getInvoices(businessId);
+      const response = await invoiceService.getInvoices();
       const invoiceData = response || [];
       setInvoices(invoiceData);
       setFilteredInvoices(invoiceData);

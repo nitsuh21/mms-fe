@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useNotification } from '@/context/NotificationContext';
 import { Customer, CreateCustomerData, UpdateCustomerData } from '@/services/customerService';
@@ -39,12 +39,12 @@ export default function MembersPage() {
         title: 'Member Added',
         message: response.message || 'New member has been added and a membership request has been created.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to add member:', error);
       addNotification({
         type: 'error',
         title: 'Error Adding Member',
-        message: error.message || 'Failed to add member. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to add member. Please try again.',
       });
     }
   };
@@ -58,12 +58,12 @@ export default function MembersPage() {
         title: 'Member Updated',
         message: 'Member information has been successfully updated.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update member:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: error.message || 'Failed to update member. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to update member. Please try again.',
       });
     }
   };
@@ -77,17 +77,17 @@ export default function MembersPage() {
         title: 'Member Deleted',
         message: 'Member has been successfully deleted.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete member:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: error.message || 'Failed to delete member. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to delete member. Please try again.',
       });
     }
   };
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     if (!businessId) {
       addNotification({
         type: 'error',
@@ -109,23 +109,23 @@ export default function MembersPage() {
       
       setMembers(validMembers);
       setIsLoading(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load members:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: error.message || 'Failed to load members. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to load members. Please try again.',
       });
       setMembers([]);
       setIsLoading(false);
     }
-  };
+  }, [businessId, addNotification, customerService, setMembers, setIsLoading]);
 
   useEffect(() => {
     if (businessId) {
       loadMembers();
     }
-  }, [businessId]);
+  }, [businessId, loadMembers]);
 
   if (isLoading) {
     return (

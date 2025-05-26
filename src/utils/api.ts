@@ -46,11 +46,12 @@ api.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
             return api(originalRequest);
           }
-        } catch (refreshError) {
+        } catch (error) {
           // If refresh fails, clear tokens and redirect to login
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          console.log(error);
           window.location.href = '/auth/signin';
         }
       }

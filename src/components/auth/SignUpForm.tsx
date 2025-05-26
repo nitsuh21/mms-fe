@@ -58,8 +58,9 @@ export default function SignUpForm() {
 
       // Redirect to dashboard
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred during sign up');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'An error occurred during sign up');
     } finally {
       setLoading(false);
     }

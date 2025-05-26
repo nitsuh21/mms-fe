@@ -1,6 +1,6 @@
 import React from 'react';
 import { Invoice } from '@/types/invoice';
-import { FiDollarSign, FiList, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
+import { FiDollarSign, FiList, FiX, FiTrash2 } from 'react-icons/fi';
 import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
 import { useState, useEffect } from 'react';
@@ -21,7 +21,7 @@ interface InvoiceListProps {
 
 export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: InvoiceListProps) {
   const { addNotification } = useNotification();
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
   const [invoicePayments, setInvoicePayments] = useState<{ [key: number]: number }>({});
 

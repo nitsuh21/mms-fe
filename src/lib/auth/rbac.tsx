@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { Role, Permission, ROLE_PERMISSIONS } from './types';
-import { AUTH_TOKEN_KEY, USER_KEY } from '@/config';
+import { USER_KEY } from '@/config';
 
 interface User {
   id: string;

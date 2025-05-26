@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { FiDownload, FiTrendingUp, FiTrendingDown, FiDollarSign, FiUsers, FiCalendar, FiBarChart2, FiPieChart } from 'react-icons/fi';
+import { FiDownload, FiTrendingUp, FiTrendingDown, FiDollarSign, FiUsers, FiBarChart2, FiPieChart } from 'react-icons/fi';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 
@@ -123,7 +123,7 @@ const mockTimeSeriesData: { [key: string]: TimeSeriesData[] } = {
   }))
 };
 
-export default function ReportsPage({ params }: { params: { businessId: string } }) {
+export default function ReportsPage() {
   const [dateRange, setDateRange] = useState('30d');
 
   // Get data for current date range

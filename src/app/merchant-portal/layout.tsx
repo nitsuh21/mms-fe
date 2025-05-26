@@ -23,7 +23,7 @@ export default function MerchantLayout({
 
 function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading state while checking auth
   if (isLoading) {

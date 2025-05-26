@@ -3,14 +3,14 @@ import { Controller } from 'react-hook-form';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'flatpickr/dist/themes/material_blue.css';
-import { RegisterOptions, UseFormReturn } from 'react-hook-form';
+import { RegisterOptions, UseFormReturn, Path } from 'react-hook-form';
 import { FieldValues } from 'react-hook-form';
 
-interface DatePickerProps {
+interface DatePickerProps<T extends FieldValues = FieldValues> {
   name: string;
   label: string;
-  rules?: RegisterOptions;
-  methods: UseFormReturn<FieldValues>;
+  rules?: Omit<RegisterOptions<T>, 'valueAsNumber' | 'valueAsDate' | 'setValueAs'>;
+  methods: UseFormReturn<T>;
   className?: string;
   placeholder?: string;
   description?: string;
@@ -23,21 +23,19 @@ const formatDateToISO = (date: Date): string => {
   return date.toISOString().split('.')[0]; // Remove milliseconds
 };
 
-export function DatePicker({
+export function DatePicker<T extends FieldValues = FieldValues>({
   name,
   label,
   rules,
   methods,
   className = '',
-  placeholder = '',
   description,
   required = false,
   disabled = false,
-}: DatePickerProps) {
+}: DatePickerProps<T>) {
   const {
     control,
     formState: { errors },
-    watch,
   } = methods;
 
   const error = errors[name];
@@ -48,7 +46,7 @@ export function DatePicker({
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <Controller
-        name={name}
+        name={name as Path<T>}
         control={control}
         rules={rules}
         render={({ field: { onChange, value } }) => {

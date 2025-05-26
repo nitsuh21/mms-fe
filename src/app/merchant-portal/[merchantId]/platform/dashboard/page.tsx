@@ -1,18 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FiDownload, FiTrendingUp, FiTrendingDown, FiDollarSign, FiUsers, FiRefreshCw, FiUser, FiActivity } from 'react-icons/fi';
+import { FiTrendingUp, FiUsers, FiRefreshCw, FiUser, FiActivity } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserData } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 import api from '@/services/api';
-
-interface Metric {
-  label: string;
-  value: number | string;
-  change: number;
-  trend: 'up' | 'down';
-}
 
 interface DashboardResponse {
   total_businesses: number;

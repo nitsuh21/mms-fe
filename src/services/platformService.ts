@@ -124,7 +124,7 @@ export const platformService = {
   async getMembershipPlans(businessId: string): Promise<MembershipPlan[]> {
     try {
       const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/plans/`);
-      return response.data.map((plan: any) => ({
+      return response.data.map((plan: MembershipPlan) => ({
         id: plan.id,
         name: plan.name,
         description: plan.description,
@@ -142,7 +142,7 @@ export const platformService = {
   },
 
   // Get member activities for a business
-  async getMemberActivities(businessId: string): Promise<MemberActivity[]> {
+  async getMemberActivities(businessId: string): Promise<any[]> {
     try {
       const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/activities/`);
       return response.data.map((activity: any) => ({
@@ -183,7 +183,7 @@ export const platformService = {
   },
 
   // Get reports for a business
-  async getBusinessReports(businessId: string): Promise<any[]> {
+  async getBusinessReports(businessId: string): Promise<PlatformReport[]> {
     try {
       const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/reports/`);
       return response.data;
@@ -194,7 +194,7 @@ export const platformService = {
   },
 
   // Get settings for a business
-  async getBusinessSettings(businessId: string): Promise<any> {
+  async getBusinessSettings(businessId: string): Promise<PlatformSettings> {
     try {
       const response = await axios.get(`${API_BASE_URL}/businesses/${businessId}/settings/`);
       return response.data;
@@ -205,7 +205,7 @@ export const platformService = {
   },
 
   // Update settings for a business
-  async updateBusinessSettings(businessId: string, settings: any): Promise<any> {
+  async updateBusinessSettings(businessId: string, settings: Partial<PlatformSettings>): Promise<PlatformSettings> {
     try {
       const response = await axios.put(`${API_BASE_URL}/businesses/${businessId}/settings/`, settings);
       return response.data;

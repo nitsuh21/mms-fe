@@ -1,23 +1,42 @@
 import api from './api';
 import { Invoice, CreateInvoiceData, UpdateInvoiceData, Payment, CreatePaymentData, UpdatePaymentData } from '@/types/invoice';
+import { createErrorHandler } from '@/utils/errorHandling';
+
+// Create error handler for invoice service
+const handleError = createErrorHandler('InvoiceService');
 
 // Helper function to convert numeric fields
-const convertInvoice = (invoice: any): Invoice => ({
-  ...invoice,
-  amount: typeof invoice.amount === 'number' ? invoice.amount : parseFloat(invoice.amount || '0'),
-  total_paid: typeof invoice.total_paid === 'number' ? invoice.total_paid : parseFloat(invoice.total_paid || '0'),
-  remaining_balance: typeof invoice.remaining_balance === 'number' ? invoice.remaining_balance : parseFloat(invoice.remaining_balance || '0'),
-});
+const convertInvoice = (invoice: Record<string, unknown>): Invoice => {
+  // Ensure all required fields are present with proper types
+  return {
+    id: typeof invoice.id === 'number' ? invoice.id : Number(invoice.id),
+    invoice_number: String(invoice.invoice_number || ''),
+    subscription: invoice.subscription as Invoice['subscription'],
+    customer_name: String(invoice.customer_name || ''),
+    customer_email: String(invoice.customer_email || ''),
+    amount: typeof invoice.amount === 'number' ? invoice.amount : parseFloat(String(invoice.amount) || '0'),
+    payment_method: String(invoice.payment_method || 'OT') as Invoice['payment_method'],
+    status: String(invoice.status || 'O') as Invoice['status'],
+    due_date: String(invoice.due_date || ''),
+    paid_date: invoice.paid_date ? String(invoice.paid_date) : undefined,
+    reference_number: invoice.reference_number ? String(invoice.reference_number) : undefined,
+    currency: String(invoice.currency || 'ETB'),
+    total_paid: typeof invoice.total_paid === 'number' ? invoice.total_paid : parseFloat(String(invoice.total_paid) || '0'),
+    remaining_balance: typeof invoice.remaining_balance === 'number' ? invoice.remaining_balance : parseFloat(String(invoice.remaining_balance) || '0'),
+    created_at: String(invoice.created_at || ''),
+    updated_at: String(invoice.updated_at || ''),
+    payments: Array.isArray(invoice.payments) ? invoice.payments as Payment[] : undefined
+  };
+};
 
 export const invoiceService = {
-  async getInvoices(businessId: string): Promise<Invoice[]> {
+  async getInvoices(): Promise<Invoice[]> {
     try {
       const response = await api.get(`/subscriptions/invoices/`);
       const invoices = response.data.results || [];
       return invoices.map(convertInvoice);
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'fetch invoices');
     }
   },
 

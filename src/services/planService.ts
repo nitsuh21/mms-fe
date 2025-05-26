@@ -1,4 +1,5 @@
 import api from "./api";
+import { Member } from "./memberService";
 
 export interface Discount {
   id: string;
@@ -106,24 +107,6 @@ export interface UpdatePlanData {
   is_active?: boolean;
 }
 
-// Helper function to convert billing period to months
-const billingPeriodToMonths = (period: 'D' | 'W' | 'M' | 'Y'): number => {
-  switch (period) {
-    case 'D': return 1;
-    case 'W': return 7;
-    case 'M': return 30;
-    case 'Y': return 365;
-    default: return 30;
-  }
-};
-
-// Helper function to convert months to billing period
-const monthsToBillingPeriod = (days: number): 'D' | 'W' | 'M' | 'Y' => {
-  if (days === 1) return 'D';
-  if (days === 7) return 'W';
-  if (days === 30) return 'M';
-  return 'Y';
-};
 
 export class PlanService {
   // interval: string;
@@ -189,7 +172,7 @@ export class PlanService {
   }
 
   // Get subscribers for a plan
-  static async getPlanSubscribers(planId: number): Promise<any[]> {
+  static async getPlanSubscribers(planId: number): Promise<Member[]> {
     try {
       const response = await api.get(`/subscriptions/subscription-plans/${planId}/subscribers/`);
       return response.data;

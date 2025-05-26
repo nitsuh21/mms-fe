@@ -9,10 +9,6 @@ const publicRoutes = [
   '/auth/password-reset/confirm',
 ];
 
-// Routes that require authentication
-const protectedRoutes = [
-  '/merchant-portal',
-];
 
 export function middleware(request: NextRequest) {
   // Get the current page path
@@ -20,9 +16,6 @@ export function middleware(request: NextRequest) {
 
   // Check if the current path is a public route
   const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
-
-  // Check if the current path is a protected route
-  const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route));
 
   // Allow public routes to pass through
   if (isPublicRoute) {

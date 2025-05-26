@@ -13,7 +13,7 @@ export function Tabs({ defaultValue, children }: TabsProps) {
     <div className="space-y-4">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
+          return React.cloneElement(child as React.ReactElement<TabsTriggerProps>, {
             activeTab,
             setActiveTab,
           });
@@ -36,7 +36,7 @@ export function TabsList({ children, activeTab, setActiveTab }: TabsListProps) {
       <nav className="-mb-px flex space-x-8" aria-label="Tabs">
         {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<TabsTriggerProps>, {
               activeTab,
               setActiveTab,
             });

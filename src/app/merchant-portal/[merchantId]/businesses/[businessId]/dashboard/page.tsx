@@ -85,14 +85,12 @@ interface DashboardData {
   recentMembers: MemberActivity[];
 }
 
-type TimeRange = 'today' | 'week' | 'month' | 'year';
-
 // Chart components
 import dynamic from 'next/dynamic';
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface ChartProps {
-  data: any[];
+  data: Record<string, unknown>[];
   type: 'line' | 'donut';
   title: string;
   xKey?: string;
@@ -114,8 +112,8 @@ const Chart: React.FC<ChartProps> = ({ data, type, title, xKey, yKey, nameKey, v
         series={[{
           name: title,
           data: data.map(d => ({
-            x: d[xKey || 'x'],
-            y: d[yKey || 'y']
+            x: d[xKey || 'x'] as string | number,
+            y: d[yKey || 'y'] as number
           }))
         }]}
         type="line"
@@ -129,7 +127,7 @@ const Chart: React.FC<ChartProps> = ({ data, type, title, xKey, yKey, nameKey, v
       <ReactApexChart
         options={{
           chart: { type: 'donut' },
-          labels: data.map(d => d[nameKey || 'name']),
+          labels: data.map(d => String(d[nameKey || 'name'])),
           legend: { position: 'bottom' },
           title: { text: title, style: { fontSize: '14px' } },
           plotOptions: {
@@ -142,7 +140,7 @@ const Chart: React.FC<ChartProps> = ({ data, type, title, xKey, yKey, nameKey, v
           },
           dataLabels: { enabled: false }
         }}
-        series={data.map(d => d[valueKey || 'value'])}
+        series={data.map(d => Number(d[valueKey || 'value']))}
         type="donut"
         height={200}
       />
@@ -151,100 +149,74 @@ const Chart: React.FC<ChartProps> = ({ data, type, title, xKey, yKey, nameKey, v
 
   return null;
 };
-const LineChart = ({ data }: { data: number[] }) => {
-  const maxValue = Math.max(...data);
-  const minValue = Math.min(...data);
-  const range = maxValue - minValue;
-  const padding = range * 0.1; // Add 10% padding
-  const adjustedMax = maxValue + padding;
-  const adjustedMin = Math.max(0, minValue - padding);
-  const adjustedRange = adjustedMax - adjustedMin;
+// const LineChart = ({ data }: { data: number[] }) => {
+//   const maxValue = Math.max(...data);
+//   const minValue = Math.min(...data);
+//   const range = maxValue - minValue;
+//   const padding = range * 0.1; // Add 10% padding
+//   const adjustedMax = maxValue + padding;
+//   const adjustedMin = Math.max(0, minValue - padding);
+//   const adjustedRange = adjustedMax - adjustedMin;
 
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * 100;
-    const y = 100 - ((value - adjustedMin) / adjustedRange) * 100;
-    return `${x},${y}`;
-  });
+//   const points = data.map((value, index) => {
+//     const x = (index / (data.length - 1)) * 100;
+//     const y = 100 - ((value - adjustedMin) / adjustedRange) * 100;
+//     return `${x},${y}`;
+//   });
 
-  // Create smooth curve using cubic bezier
-  const path = points.reduce((acc, point, i, points) => {
-    if (i === 0) return `M ${point}`;
+//   // Create smooth curve using cubic bezier
+//   const path = points.reduce((acc, point, i, points) => {
+//     if (i === 0) return `M ${point}`;
     
-    const prev = points[i - 1].split(',').map(Number);
-    const curr = point.split(',').map(Number);
-    const cp1x = prev[0] + (curr[0] - prev[0]) / 3;
-    const cp1y = prev[1];
-    const cp2x = prev[0] + (curr[0] - prev[0]) * 2 / 3;
-    const cp2y = curr[1];
+//     const prev = points[i - 1].split(',').map(Number);
+//     const curr = point.split(',').map(Number);
+//     const cp1x = prev[0] + (curr[0] - prev[0]) / 3;
+//     const cp1y = prev[1];
+//     const cp2x = prev[0] + (curr[0] - prev[0]) * 2 / 3;
+//     const cp2y = curr[1];
     
-    return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${curr[0]},${curr[1]}`;
-  }, '');
+//     return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${curr[0]},${curr[1]}`;
+//   }, '');
 
-  return (
-    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path
-        d={`${path} L 100,100 L 0,100 Z`}
-        fill="url(#gradient)"
-      />
-      <path
-        d={path}
-        fill="none"
-        stroke="#3B82F6"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      {data.map((value, i) => {
-        const x = (i / (data.length - 1)) * 100;
-        const y = 100 - ((value - adjustedMin) / adjustedRange) * 100;
-        return (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r="2"
-            fill="#3B82F6"
-            vectorEffect="non-scaling-stroke"
-          />
-        );
-      })}
-    </svg>
-  );
-};
+//   return (
+//     <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+//       <defs>
+//         <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+//           <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
+//           <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+//         </linearGradient>
+//       </defs>
+//       <path
+//         d={`${path} L 100,100 L 0,100 Z`}
+//         fill="url(#gradient)"
+//       />
+//       <path
+//         d={path}
+//         fill="none"
+//         stroke="#3B82F6"
+//         strokeWidth="2"
+//         strokeLinecap="round"
+//         strokeLinejoin="round"
+//         vectorEffect="non-scaling-stroke"
+//       />
+//       {data.map((value, i) => {
+//         const x = (i / (data.length - 1)) * 100;
+//         const y = 100 - ((value - adjustedMin) / adjustedRange) * 100;
+//         return (
+//           <circle
+//             key={i}
+//             cx={x}
+//             cy={y}
+//             r="2"
+//             fill="#3B82F6"
+//             vectorEffect="non-scaling-stroke"
+//           />
+//         );
+//       })}
+//     </svg>
+//   );
+// };
 
-// Simple SVG-based pie chart component
-const PieChart = ({ data }: { data: { value: number; color: string }[] }) => {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  let currentAngle = 0;
-
-  return (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      {data.map((item, index) => {
-        const angle = (item.value / total) * 360;
-        const x1 = 50 + 40 * Math.cos((currentAngle * Math.PI) / 180);
-        const y1 = 50 + 40 * Math.sin((currentAngle * Math.PI) / 180);
-        const x2 = 50 + 40 * Math.cos(((currentAngle + angle) * Math.PI) / 180);
-        const y2 = 50 + 40 * Math.sin(((currentAngle + angle) * Math.PI) / 180);
-        const largeArcFlag = angle > 180 ? 1 : 0;
-        const path = `
-          M 50 50
-          L ${x1} ${y1}
-          A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2}
-          Z
-        `;
-        currentAngle += angle;
-        return <path key={index} d={path} fill={item.color} />;
-      })}
-    </svg>
-  );
-};
 
 // Dashboard component
 export default function DashboardPage() {
@@ -254,7 +226,7 @@ export default function DashboardPage() {
   const { showNotification } = useNotification();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>({
     metrics: {
       firstRow: [],
@@ -401,7 +373,7 @@ export default function DashboardPage() {
     if (businessId) {
       fetchDashboardData();
     }
-  }, [businessId, timeFilter.period, showNotification]);
+  }, [businessId, timeFilter.period, timeFilter.filterType, timeFilter.startDate, timeFilter.endDate, showNotification]);
 
   if (isLoading) {
     return (

@@ -1,8 +1,12 @@
 import api from "./api";
 import { Invoice } from '@/types/invoice';
+import { createErrorHandler } from '@/utils/errorHandling';
+
+// Create error handler for subscription service
+const handleError = createErrorHandler('SubscriptionService');
 
 export interface Subscription {
-  id: number;
+  id: string;
   business: number;
   plan: {
     id: number;
@@ -14,7 +18,7 @@ export interface Subscription {
     interval: 'D' | 'W' | 'M' | 'Y';
     trial_days: number;
     has_trial: boolean;
-    features: Record<string, any>;
+    features: Record<string, string>;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -65,6 +69,22 @@ export interface Payment {
   status: 'C' | 'P' | 'F'; // Completed, Pending, Failed
 }
 
+export interface InvoiceData {
+  id: number;
+  invoice_number: string;
+  subscription: Subscription;
+  customer_name: string;
+  customer_email: string;
+  payment_method: string;
+  status: string;
+  due_date: string;
+  amount: number;
+  remaining_balance: number;
+  total_paid: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export class SubscriptionService {
   // Get all subscriptions for a business
   async getSubscriptions(businessId: string): Promise<Subscription[]> {
@@ -75,9 +95,8 @@ export class SubscriptionService {
     try {
       const response = await api.get(`/subscriptions/subscriptions/?business=${businessId}`);
       return response.data.results || [];
-    } catch (error: any) {
-      console.error('Error fetching subscriptions:', error);
-      throw new Error(error.response?.data?.message || 'Failed to fetch subscriptions');
+    } catch (error: unknown) {
+      return handleError(error, 'fetch subscriptions');
     }
   }
 
@@ -86,9 +105,8 @@ export class SubscriptionService {
     try {
       const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/`);
       return response.data;
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'fetch subscription details');
     }
   }
 
@@ -128,20 +146,18 @@ export class SubscriptionService {
     try {
       const response = await api.post(`/subscriptions/subscriptions/`, data);
       return response.data;
-    } catch (error: any) {
-      console.error('Error creating subscription:', error.response?.data || error);
-      throw new Error(error.response?.data?.message || 'Failed to create subscription');
+    } catch (error: unknown) {
+      return handleError(error, 'create subscription');
     }
   }
 
   // Update a subscription
-  async updateSubscription(id: number, data: UpdateSubscriptionData): Promise<Subscription> {
+  async updateSubscription(id: string, data: Partial<Subscription>): Promise<Subscription> {
     try {
       const response = await api.patch(`/subscriptions/subscriptions/${id}/`, data);
       return response.data;
-    } catch (error) {
-      console.error('Error updating subscription:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'update subscription');
     }
   }
 
@@ -163,9 +179,8 @@ export class SubscriptionService {
 
     try {
       await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`, { end_date: endDate });
-    } catch (error: any) {
-      console.error('Error cancelling subscription:', error);
-      throw new Error(error.response?.data?.message || 'Failed to cancel subscription');
+    } catch (error: unknown) {
+      return handleError(error, 'cancel subscription');
     }
   }
 
@@ -184,9 +199,8 @@ export class SubscriptionService {
   async reactivateSubscription(subscriptionId: number): Promise<void> {
     try {
       await api.post(`/subscriptions/subscriptions/${subscriptionId}/reactivate/`);
-    } catch (error) {
-      console.error('Error reactivating subscription:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'reactivate subscription');
     }
   }
 
@@ -194,9 +208,8 @@ export class SubscriptionService {
   async deleteSubscription(subscriptionId: number): Promise<void> {
     try {
       await api.delete(`/subscriptions/subscriptions/${subscriptionId}/`);
-    } catch (error) {
-      console.error('Error deleting subscription:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'delete subscription');
     }
   }
 
@@ -205,9 +218,8 @@ export class SubscriptionService {
     try {
       const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/payments/`);
       return response.data.results;
-    } catch (error) {
-      console.error('Error fetching payment history:', error);
-      throw error;
+    } catch (error: unknown) {
+      return handleError(error, 'fetch payment history');
     }
   }
 
@@ -225,6 +237,7 @@ export class SubscriptionService {
       subscription: invoice.subscription,
       customer_name: customerName,
       customer_email: customerEmail,
+      currency: invoice.currency || 'ETB',
       payment_method: invoice.payment_method,
       status: invoice.status,
       due_date: invoice.due_date,

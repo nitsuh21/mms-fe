@@ -18,6 +18,7 @@ export interface Invoice {
   due_date: string;
   paid_date?: string;
   reference_number?: string;
+  currency: string;
   total_paid: number;
   remaining_balance: number;
   created_at: string;

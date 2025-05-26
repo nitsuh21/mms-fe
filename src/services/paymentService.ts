@@ -1,5 +1,5 @@
 import api from './api';
-import { Payment, CreatePaymentData, UpdatePaymentData } from '@/types/payment';
+import { CreatePaymentData, UpdatePaymentData } from '@/types/payment';
 
 export const paymentService = {
   async createPayment(paymentData: CreatePaymentData) {

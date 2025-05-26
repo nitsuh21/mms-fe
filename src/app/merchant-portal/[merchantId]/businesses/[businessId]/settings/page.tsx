@@ -6,8 +6,8 @@ import { FiSave, FiUpload, FiTrash2 } from 'react-icons/fi';
 import { businessService } from '@/services/businessService';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import type { Business } from '@/types/business';
-import { Form, InputField, CheckboxField, SubmitButton } from '@/components/ui/Form';
-import { SelectField, type SelectFieldProps } from '@/components/ui/Form/SelectField';
+import {  InputField, CheckboxField, SubmitButton } from '@/components/ui/Form';
+import { SelectField } from '@/components/ui/Form/SelectField';
 import Image from 'next/image';
 
 

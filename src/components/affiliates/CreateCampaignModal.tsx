@@ -95,11 +95,11 @@ export function CreateCampaignModal({
       reset();
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       showNotification({
         type: "error",
         title: "Error",
-        message: "Failed to create campaign",
+        message: `Failed to create campaign ${error}`,
       });
     } finally {
       setIsSubmitting(false);

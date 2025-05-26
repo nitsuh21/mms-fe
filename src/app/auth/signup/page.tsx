@@ -50,9 +50,14 @@ export default function SignUpPage() {
       
       // Redirect to dashboard
       router.push(`/merchant-portal/${response.user.id}/platform/dashboard`);
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('Signup error:', err);
-      setError(err.response?.data?.message || err.response?.data?.detail || 'An error occurred during sign up');
+      if (err && typeof err === 'object' && 'response' in err) {
+        const apiError = err.response as { data?: { message?: string; detail?: string } };
+        setError(apiError.data?.message || apiError.data?.detail || 'An error occurred during sign up');
+      } else {
+        setError('An error occurred during sign up');
+      }
     } finally {
       setLoading(false);
     }

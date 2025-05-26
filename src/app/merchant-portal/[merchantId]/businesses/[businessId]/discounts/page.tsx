@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { Form, InputField, SelectField, SubmitButton } from '@/components/ui/Form';
 import { useNotification } from '@/context/NotificationContext';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { discountsService } from '@/services/discounts';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { DatePicker } from '@/components/ui/DatePicker';
 
 interface Discount {
@@ -23,21 +23,6 @@ interface Discount {
   specific_plans?: string[];
   max_uses: string;
   times_used: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Plan {
-  id: string;
-  business: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  interval: 'D' | 'W' | 'M' | 'Y';
-  trial_days: number;
-  features: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -107,9 +92,9 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
     } : defaultValues,
   });
 
-  const { handleSubmit, register, reset } = methods;
+  const { reset } = methods;
 
-  const onSubmit: SubmitHandler<AddDiscountParams> = async (data) => {
+  const onSubmit = async (data: AddDiscountParams) => {
     try {
       if (selectedDiscount) {
         await handleUpdateDiscount(selectedDiscount.id, data);
@@ -204,21 +189,18 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
     }
   };
 
-  useEffect(() => {
-    loadDiscounts();
-    //loadPlans();
-  }, []);
-
-  const loadDiscounts = async () => {
+  const loadDiscounts = useCallback(async () => {
     try {
       const response = await discountsService.getAll();
-      const formattedDiscounts: Discount[] = response.map((discount: any) => ({
-        ...discount,
-        id: discount.id.toString(),
-        business: discount.business.toString(),
-        discount_value: discount.discount_value.toString(),
-        max_uses: discount.max_uses.toString(),
-        specific_plans: discount.specific_plans.map((p: any) => p.toString()),
+      const formattedDiscounts: Discount[] = response.map((item: any) => ({
+        ...item,
+        id: String(item.id),
+        business: String(item.business),
+        discount_value: String(item.discount_value),
+        max_uses: String(item.max_uses),
+        specific_plans: Array.isArray(item.specific_plans) 
+          ? item.specific_plans.map((p: any) => String(p)) 
+          : [],
       }));
       setDiscounts(formattedDiscounts);
     } catch (error) {
@@ -229,18 +211,11 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
         message: 'Failed to load discounts',
       });
     }
-  };
+  }, [addNotification, discountsService, setDiscounts]);
 
-  // const loadPlans = async () => {
-  //   try {
-  //     const data = await planService.getAll();
-  //     setPlans(data);
-  //   } catch (error) {
-  //     console.error('Error loading plans:', error);
-  //     addNotification({
-  //       type: 'error',
-  //       title: 'Error',
-  //       message: 'Failed to load plans',
+  useEffect(() => {
+    loadDiscounts();
+  }, [loadDiscounts]);
   //     });
   //   }
   // };
@@ -406,13 +381,12 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                     </h3>
                     <Form<AddDiscountParams>
                       onSubmit={onSubmit}
-                      defaultValues={methods.getValues()}
                       className="space-y-4"
                     >
                       {(formMethods) => (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputField
-                  {...register('name', {
+                  {...formMethods.register('name', {
                     required: 'Name is required',
                     minLength: { value: 2, message: 'Name must be at least 2 characters' },
                     maxLength: { value: 100, message: 'Name must be less than 100 characters' },
@@ -426,7 +400,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <InputField
-                  {...register('code', {
+                  {...formMethods.register('code', {
                     required: 'Code is required',
                     minLength: { value: 3, message: 'Code must be at least 3 characters' },
                     maxLength: { value: 20, message: 'Code must be less than 20 characters' },
@@ -436,7 +410,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <SelectField
-                  {...register('discount_type', {
+                  {...formMethods.register('discount_type', {
                     required: 'Discount type is required',
                   })}
                   label="Discount Type"
@@ -447,7 +421,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <InputField
-                  {...register('discount_value', {
+                  {...formMethods.register('discount_value', {
                     required: 'Discount value is required',
                     pattern: { value: /^[0-9]+(\.[0-9]{1,2})?$/, message: 'Invalid discount value' },
                     min: { value: 0, message: 'Discount value must be positive' },
@@ -458,7 +432,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <SelectField
-                  {...register('discount_category', {
+                  {...formMethods.register('discount_category', {
                     required: 'Discount category is required',
                   })}
                   label="Discount Category"
@@ -469,7 +443,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <SelectField
-                  {...register('is_active', {
+                  {...formMethods.register('is_active', {
                     required: 'Status is required',
                   })}
                   label="Status"
@@ -480,8 +454,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   methods={formMethods}
                 />
                         <div>
-                  <DatePicker
-                    {...register('valid_from', {
+                  <DatePicker<AddDiscountParams>
+                    {...formMethods.register('valid_from', {
                       required: 'Valid From is required',
                       validate: (value) => {
                         if (!value) return 'Valid From is required';
@@ -495,8 +469,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   />
                 </div>
                         <div>
-                  <DatePicker
-                    {...register('valid_until', {
+                  <DatePicker<AddDiscountParams>
+                    {...formMethods.register('valid_until', {
                       required: 'Valid Until is required',
                       validate: (value) => {
                         const validFrom = formMethods.getValues('valid_from');
@@ -512,7 +486,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                   />
                 </div>
                         <InputField
-                  {...register('max_uses', {
+                  {...formMethods.register('max_uses', {
                     required: 'Maximum uses is required',
                     pattern: { value: /^[0-9]+$/, message: 'Invalid number format' },
                     min: { value: 1, message: 'Maximum uses must be at least 1' },
@@ -562,11 +536,11 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {(discounts as any).map((discount: Discount) => (
+              {discounts.map((discount: Discount) => (
                 <tr key={discount.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   {columns.map((column) => (
                     <td key={column.header} className="px-6 py-4 whitespace-nowrap">
-                      {column.cell ? column.cell({ row: { original: discount } }) : (discount as any)[column.accessorKey]}
+                      {column.cell ? column.cell({ row: { original: discount } }) : discount[column.accessorKey as keyof Discount]}
                     </td>
                   ))}
                 </tr>

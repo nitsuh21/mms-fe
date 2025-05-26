@@ -5,7 +5,6 @@ import { formatDate } from '@/utils/dateUtils';
 import { FiX, FiDownload, FiCreditCard } from 'react-icons/fi';
 import { Dialog } from '@headlessui/react';
 import { PaymentsList } from './PaymentsList';
-import { useNotification } from "@/context/NotificationContext";
 
 interface InvoiceDetailsProps {
   invoiceId: number | null;
