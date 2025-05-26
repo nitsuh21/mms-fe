@@ -33,7 +33,7 @@ export class AuthService {
   static async signIn(credentials: { email: string; password: string }): Promise<AuthResponse> {
     try {
       this.clearTokens();
-      const response = await api.post('auth/signin/', credentials);
+      const response = await api.post('/auth/signin/', credentials);
       
       // Store tokens and user info
       this.setTokens({
@@ -59,7 +59,7 @@ export class AuthService {
     last_name: string;
   }): Promise<AuthResponse> {
     try {
-      const response = await api.post('auth/signup/', userData);
+      const response = await api.post('/auth/signup/', userData);
       
       // Store tokens and user info
       AuthService.setTokens({
@@ -90,7 +90,7 @@ export class AuthService {
         await this.refreshToken();
         
         // Now use the access token to sign out
-        const response = await api.post('auth/signout/', {}, {
+        const response = await api.post('/auth/signout/', {}, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -113,7 +113,7 @@ export class AuthService {
 
   static async updateProfile(data: any): Promise<UserData> {
     try {
-      const response = await api.patch('auth/profile/', data);
+      const response = await api.patch('/auth/profile/', data);
       return response.data;
     } catch (error: any) {
       if (error.response?.data?.error) {
@@ -125,7 +125,7 @@ export class AuthService {
 
   static async handleGoogleCallback(code: string): Promise<AuthResponse> {
     try {
-      const response = await api.post('auth/google/', { 
+      const response = await api.post('/auth/google/', { 
         code,
         redirect_uri: window.location.origin + '/auth/callback/google'
       });
@@ -153,7 +153,7 @@ export class AuthService {
     }
 
     try {
-      const response = await api.post('auth/token/refresh/', {
+      const response = await api.post('/auth/token/refresh/', {
         refresh: refreshToken
       });
       
