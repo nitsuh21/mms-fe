@@ -6,6 +6,7 @@ export const REFRESH_TOKEN_KEY = 'refreshToken';
 export const USER_KEY = 'user';
 export const MERCHANT_KEY = 'merchant';
 
+
 // Routes
 export const ROUTES = {
     HOME: '/',
