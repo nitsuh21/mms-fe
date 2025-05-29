@@ -2,22 +2,20 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 import { AuthService } from './authService';
 
 // API base URL from environment variables
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// // Ensure the API URL ends with a slash
-// const normalizedApiUrl = API_BASE_URL.endsWith('/') 
-//   ? API_BASE_URL + 'api/'
-//   : API_BASE_URL + '/api/';
+// Ensure the API URL ends with /api
+const normalizedApiUrl = API_BASE_URL.endsWith('/') 
+  ? API_BASE_URL.slice(0, -1) + '/api'
+  : API_BASE_URL + '/api';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: normalizedApiUrl,
   headers: {
-    'Content-Type': 'application/json','Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
-    'Access-Control-Allow-Credentials': 'true'
+    'Content-Type': 'application/json'
   },
   // Enable sending cookies with requests
-  withCredentials: false,
+  withCredentials: true,
   timeout: 10000,
 });
 

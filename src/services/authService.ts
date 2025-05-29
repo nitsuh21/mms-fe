@@ -90,7 +90,7 @@ export class AuthService {
         await this.refreshToken();
         
         // Now use the access token to sign out
-        const response = await api.post('/auth/signout/', {}, {
+        const response = await api.post('/auth/signout', {}, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -106,14 +106,14 @@ export class AuthService {
   }
 
   static getGoogleAuthUrl(): string {
-    return `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google/?redirect_uri=${encodeURIComponent(
+    return `${process.env.NEXT_PUBLIC_API_URL}/auth/google?redirect_uri=${encodeURIComponent(
       window.location.origin + '/auth/callback/google'
     )}`;
   }
 
   static async updateProfile(data: any): Promise<UserData> {
     try {
-      const response = await api.patch('/auth/profile/', data);
+      const response = await api.patch('/auth/profile', data);
       return response.data;
     } catch (error: any) {
       if (error.response?.data?.error) {
@@ -125,7 +125,7 @@ export class AuthService {
 
   static async handleGoogleCallback(code: string): Promise<AuthResponse> {
     try {
-      const response = await api.post('/auth/google/', { 
+      const response = await api.post('/auth/google', { 
         code,
         redirect_uri: window.location.origin + '/auth/callback/google'
       });
@@ -153,7 +153,7 @@ export class AuthService {
     }
 
     try {
-      const response = await api.post('/auth/token/refresh/', {
+      const response = await api.post('/auth/token/refresh', {
         refresh: refreshToken
       });
       
