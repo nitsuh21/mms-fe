@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { API_URL } from '@/config';
+
+import api from './api';
 
 export interface Notification {
   id: string;
@@ -19,13 +19,7 @@ export class NotificationService {
   private readonly api: any;
 
   private constructor() {
-    this.api = axios.create({
-      baseURL: `${API_URL}/`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
+    this.api = api;
     // Add authentication interceptor
     this.api.interceptors.request.use((config: any) => {
       const token = localStorage.getItem('accessToken');

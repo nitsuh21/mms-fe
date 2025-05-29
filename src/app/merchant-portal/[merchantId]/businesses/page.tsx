@@ -7,7 +7,7 @@ import { FiEdit, FiTrash2, FiEye } from "react-icons/fi";
 
 export default function BusinessesPage() {
   const params = useParams();
-  const merchantId = params.merchantId as string;
+  const merchantId = params?.merchantId as string;
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">

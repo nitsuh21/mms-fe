@@ -4,18 +4,21 @@ import { AuthService } from './authService';
 // API base URL from environment variables
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Ensure the API URL ends with /api
+// Normalize API URL by removing trailing slash if present
 const normalizedApiUrl = API_BASE_URL.endsWith('/') 
-  ? API_BASE_URL.slice(0, -1) + '/api'
-  : API_BASE_URL + '/api';
+  ? API_BASE_URL.slice(0, -1)
+  : API_BASE_URL;
+
+console.log('API_BASE_URL', API_BASE_URL);
+console.log('normalizedApiUrl', normalizedApiUrl);
 
 const api = axios.create({
-  baseURL: normalizedApiUrl,
+  baseURL: `${normalizedApiUrl}/api`,  // Add /api to base URL
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
-  // Enable sending cookies with requests
-  withCredentials: true,
+  withCredentials: true, // This is required for cookies/credentials
   timeout: 10000,
 });
 
@@ -30,6 +33,7 @@ const extractTenantId = () => {
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      // Add auth token
       const token = AuthService.getAccessToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;

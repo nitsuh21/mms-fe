@@ -45,8 +45,6 @@ export class CustomerService {
   async getCustomers(): Promise<Customer[]> {
     try {
       const response = await api.get(`/subscriptions/customers/`);
-      console.log("Raw response:", response);
-      console.log("Response data:", response.data);
       if (Array.isArray(response.data)) {
         return response.data;
       }

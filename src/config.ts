@@ -1,5 +1,3 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
 // Local storage keys
 export const AUTH_TOKEN_KEY = 'accessToken';
 export const REFRESH_TOKEN_KEY = 'refreshToken';
