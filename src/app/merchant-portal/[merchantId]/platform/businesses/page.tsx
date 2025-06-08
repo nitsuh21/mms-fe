@@ -157,7 +157,7 @@ export default function PlatformBusinessesPage() {
             <div className="col-span-2 text-right">
               <div className="flex items-center justify-end space-x-2">
                 <Link
-                  href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}`}
+                  href={`/merchant-portal/${merchantId}/businesses/${business.id}/dashboard`}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                   title="View details"
                 >
