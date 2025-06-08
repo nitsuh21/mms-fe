@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 import { dashboardService, type DashboardData, type TimeFilter } from '@/services/dashboardService';
-import { FiUsers} from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiTrendingDown, FiCheckCircle, FiRefreshCw, FiTarget } from 'react-icons/fi';
 import { IconType } from 'react-icons';
 import { formatNumber } from '../../../../../../../src/utils/format';
 
@@ -180,88 +180,69 @@ function DashboardPage() {
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     try {
-      const blob = await dashboardService.exportDashboardData(merchantId, businessId, timeFilter, format);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dashboard-export.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setIsLoading(true);
+      await dashboardService.exportDashboardData(merchantId, businessId, timeFilter, format);
+      showNotification({
+        title: 'Success',
+        message: `Dashboard data exported as ${format.toUpperCase()}`,
+        type: 'success'
+      });
     } catch (error: any) {
       showNotification({
-        title: 'Export Error',
-        message: error.message || 'Failed to export dashboard data',
+        title: 'Error',
+        message: error.message || `Failed to export dashboard as ${format.toUpperCase()}`,
         type: 'error'
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null; // Will redirect in useEffect
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-      </div>
-    );
+  if (authLoading || isLoading) {
+    return <div>Loading...</div>;
   }
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="text-red-600 mb-4">{error || 'No data available'}</div>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-        >
-          Retry
-        </button>
-      </div>
-    );
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
-        
-        <div className="flex flex-wrap gap-2 items-center">
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           {/* Time Filter */}
-          <select
-            value={timeFilter.period}
-            onChange={(e) => setTimeFilter({ filterType: 'period', period: e.target.value as 'day' | 'week' | 'month' | 'year' })}
-            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="day">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="year">This Year</option>
-          </select>
-
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setTimeFilter({ filterType: 'period', period: 'year' })}
+              className={`px-3 py-1 text-sm rounded-md ${timeFilter.period === 'year' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'}`}
+            >
+              Year
+            </button>
+            <button
+              onClick={() => setTimeFilter({ filterType: 'period', period: 'month' })}
+              className={`px-3 py-1 text-sm rounded-md ${timeFilter.period === 'month' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'}`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setTimeFilter({ filterType: 'period', period: 'week' })}
+              className={`px-3 py-1 text-sm rounded-md ${timeFilter.period === 'week' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'}`}
+            >
+              Week
+            </button>
+          </div>
           {/* Export Buttons */}
-          <div className="flex gap-2">
+          <div className="flex space-x-2">
             <button
               onClick={() => handleExport('csv')}
-              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+              className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200"
             >
               Export CSV
             </button>
             <button
               onClick={() => handleExport('pdf')}
-              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+              className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               Export PDF
             </button>
@@ -269,88 +250,225 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* First Row Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {dashboardData?.metrics?.firstRow?.map((metric: Metric, index: number) => (
-          <div
-            key={index}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200"
-          >
-            <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
-                    {metric.icon && <metric.icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />}
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{metric.title}</h3>
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Members Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiUsers className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                 </div>
-                {metric.trend && (
-                  <div className={`flex items-center text-sm ${metric.trend === 'up' ? 'text-green-500' : metric.trend === 'down' ? 'text-red-500' : 'text-gray-500'}`}>
-                    {metric.change && (
-                      <span>{(metric.change > 0 ? '+' : '') + metric.change.toFixed(1)}{metric.showAsPercentage ? '%' : ''}</span>
-                    )}
-                  </div>
-                )}
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Members</h3>
               </div>
-              <div className="mt-4">
-                <div className="text-3xl font-semibold text-gray-900 dark:text-white">
-                  {typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value}
-                </div>
-                {metric.subtitles && (
-                  <div className="mt-2 grid grid-cols-2 gap-4">
-                    {metric.subtitles.map((subtitle, idx) => (
-                      <div key={idx} className="text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">{subtitle.text}: </span>
-                        <span className="text-gray-900 dark:text-white font-medium">
-                          {typeof subtitle.value === 'number' ? formatNumber(subtitle.value) : subtitle.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.members?.growthPercent ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.members?.growthPercent ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.members?.growthPercent ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(dashboardData?.metrics?.members?.total ?? 0)}</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.members?.active ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">New This Month</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.members?.newThisMonth ?? 0)}</p>
               </div>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* MRR Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiDollarSign className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">MRR</h3>
+              </div>
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.revenue?.growthPercent ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.revenue?.growthPercent ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.revenue?.growthPercent ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(dashboardData?.metrics?.revenue?.mrr ?? 0)}</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Revenue</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.revenue?.totalRevenue ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Growth</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.revenue?.growthPercent ?? 0}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiTrendingDown className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Performance</h3>
+              </div>
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.performance?.growthPercent ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.performance?.growthPercent ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.performance?.growthPercent ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData?.metrics?.performance?.performancePercent ?? 0}%</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Churn Rate</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.performance?.churnRate ?? 0}%</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">ARPU</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.performance?.arpu ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Growth</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.performance?.growthPercent ?? 0}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Subscriptions Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiCheckCircle className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Subscriptions</h3>
+              </div>
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.subscriptions?.growthPercent ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.subscriptions?.growthPercent ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.subscriptions?.growthPercent ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(dashboardData?.metrics?.subscriptions?.total ?? 0)}</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.subscriptions?.active ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Trial</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.subscriptions?.trial ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Growth</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.subscriptions?.growthPercent ?? 0}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Renewals Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiRefreshCw className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Renewals</h3>
+              </div>
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.renewals?.growthRate ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.renewals?.growthRate ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.renewals?.growthRate ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(dashboardData?.metrics?.renewals?.total ?? 0)}</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">This Month</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.renewals?.thisMonth ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Next Month</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.renewals?.nextMonth ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Growth Rate</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.renewals?.growthRate ?? 0}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Campaigns Metric */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
+                  <FiTarget className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Campaigns</h3>
+              </div>
+              <span className={`flex items-center text-sm font-medium ${(dashboardData?.metrics?.campaigns?.growthPercent ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {(dashboardData?.metrics?.campaigns?.growthPercent ?? 0) >= 0 ? '↑' : '↓'} {Math.abs(dashboardData?.metrics?.campaigns?.growthPercent ?? 0)}%
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(dashboardData?.metrics?.campaigns?.total ?? 0)}</h4>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.campaigns?.active ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Draft</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{formatNumber(dashboardData?.metrics?.campaigns?.draft ?? 0)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Growth</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{dashboardData?.metrics?.campaigns?.growthPercent ?? 0}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Second Row Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        {dashboardData?.metrics?.secondRow?.map((metric: Metric, index: number) => (
-          <div
-            key={index}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200"
-          >
-            <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-800/30">
-                    {metric.icon && <metric.icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">{metric.title}</h3>
-                </div>
-                {metric.trend && (
-                  <span className={`flex items-center text-sm font-medium ${metric.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {metric.trend === 'up' ? '↑' : '↓'} {metric.change}%
-                  </span>
-                )}
-              </div>
-              <div className="mt-3">
-                <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{metric.value}</h4>
-              </div>
-            </div>
-            {metric.subtitles && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {metric.subtitles.map((subtitle: Subtitle, idx: number) => (
-                  <div key={idx} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle.text}</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{subtitle.value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* Subscription Trends */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <Chart
+            data={dashboardData?.metrics.analytics.subscriptionTrends || []}
+            type="line"
+            title="Subscription Trends"
+            xKey="date"
+            yKey="value"
+          />
+        </div>
+
+        {/* Plan Distribution */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <Chart
+            data={dashboardData?.metrics.analytics.planDistribution || []}
+            type="donut"
+            title="Plan Distribution"
+            nameKey="name"
+            valueKey="value"
+          />
+        </div>
       </div>
 
       {/* Recent Members */}
@@ -381,11 +499,7 @@ function DashboardPage() {
                     <div className="text-sm text-gray-900 dark:text-white">{member.plan}</div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.status === 'active' ? 'bg-green-100 text-green-800' :
-                      member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active' ? 'bg-green-100 text-green-800' : member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                       {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
                     </span>
                   </td>

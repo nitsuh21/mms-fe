@@ -42,8 +42,18 @@ export interface MemberActivity {
 
 export interface DashboardData {
   metrics: {
-    firstRow: Metric[];
-    secondRow: Metric[];
+    members: {
+      total: number;
+      active: number;
+      newThisMonth: number;
+      growthPercent: number;
+    };
+    subscriptions: {
+      total: number;
+      active: number;
+      trial: number;
+      growthPercent: number;
+    };
     analytics: {
       subscriptionTrends: Array<{
         date: string;
@@ -54,6 +64,29 @@ export interface DashboardData {
         value: number;
         percentage: number;
       }>;
+    };
+    revenue: {
+      totalRevenue: number;
+      mrr: number;
+      growthPercent: number;
+    };
+    performance: {
+      performancePercent: number;
+      churnRate: number;
+      arpu: number;
+      growthPercent: number;
+    };
+    renewals: {
+      total: number;
+      thisMonth: number;
+      nextMonth: number;
+      growthRate: number;
+    };
+    campaigns: {
+      total: number;
+      active: number;
+      draft: number;
+      growthPercent: number;
     };
   };
   topPlans: MembershipPlan[];
