@@ -34,7 +34,7 @@ export interface Subscription {
     created_at: string;
     updated_at: string;
   };
-  status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
+  status: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PN';
   start_date: string;
   end_date: string;
   trial_end: string | null;
@@ -49,14 +49,14 @@ export interface CreateSubscriptionData {
   customer_id: number;
   start_date: string;
   end_date?: string;
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PN';
   trial_end?: string;
   next_billing_date: string;
   use_trial?: boolean;
 }
 
 export interface UpdateSubscriptionData {
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PN';
   start_date?: string;
   end_date?: string;
   trial_end?: string;

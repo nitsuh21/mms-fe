@@ -82,9 +82,6 @@ export default function PlatformNavigation() {
           </Link>
         ))}
         </div>
-        <div className="flex items-center">
-          <NotificationDropdown />
-        </div>
       </nav>
     </div>
   );

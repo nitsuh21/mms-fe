@@ -83,10 +83,9 @@ export default function PlatformDashboardPage() {
     <div className="space-y-6 px-4 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Platform Overview</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Welcome, {(user as UserData)?.first_name}! View platform-wide performance and analytics
-          </p>
+          <h4 className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+            Welcome, {(user as UserData)?.first_name}! View general performance and analytics.
+          </h4>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -100,13 +99,6 @@ export default function PlatformDashboardPage() {
             <option value="90d">Last 90 days</option>
             <option value="12m">Last 12 months</option>
           </select>
-          <button 
-            onClick={handleLogout}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-          >
-            <FiUsers className="h-4 w-4" />
-            Logout
-          </button>
         </div>
       </div>
 

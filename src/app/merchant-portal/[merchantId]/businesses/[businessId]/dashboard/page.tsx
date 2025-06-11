@@ -158,7 +158,9 @@ function DashboardPage() {
         try {
           setIsLoading(true);
           setError(null);
-          const data = await dashboardService.getDashboardData(merchantId, businessId, timeFilter);
+          console.log('Fetching dashboard data for businessId:', businessId);
+          const data = await dashboardService.getDashboardData(businessId, timeFilter);
+          console.log('Dashboard data:', data);
           setDashboardData(data);
         } catch (error: any) {
           console.error('Error fetching dashboard data:', error);
