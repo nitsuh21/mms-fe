@@ -7,6 +7,7 @@ import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationM
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 import { Business } from "@/types/business";
+import { FiExternalLink } from "react-icons/fi";
 
 interface PaginatedResponse {
   count: number;
@@ -112,17 +113,20 @@ export default function PlatformBusinessesPage() {
           <div className="col-span-3">
             <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Business Name</h5>
           </div>
-          <div className="col-span-2">
+          {/* <div className="col-span-2">
             <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Owner</h5>
-          </div>
+          </div> */}
           <div className="col-span-2">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Location</h5>
+            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Address</h5>
           </div>
           <div className="col-span-1">
             <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</h5>
           </div>
           <div className="col-span-2">
             <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Members</h5>
+          </div>
+          <div className="col-span-2">
+            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Website</h5>
           </div>
           <div className="col-span-2 text-right">
             <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</h5>
@@ -138,11 +142,11 @@ export default function PlatformBusinessesPage() {
               <h3 className="text-sm font-medium text-gray-900 dark:text-white">{business.name}</h3>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{business.email}</p>
             </div>
-            <div className="col-span-2">
+            {/* <div className="col-span-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">N/A</p>
-            </div>
+            </div> */}
             <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{business.location || 'N/A'}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{business.address || 'N/A'}</p>
             </div>
             <div className="col-span-1">
               <span
@@ -154,6 +158,24 @@ export default function PlatformBusinessesPage() {
             <div className="col-span-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">0 members</p>
             </div>
+            <div className="col-span-2">
+            <div className="flex items-center gap-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                {business.website || 'N/A'}
+              </p>
+              {business.website && (
+                <a
+                  href={business.website.startsWith('http') ? business.website : `https://${business.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-blue-500"
+                  title="Visit website"
+                >
+                  <FiExternalLink className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          </div>
             <div className="col-span-2 text-right">
               <div className="flex items-center justify-end space-x-2">
                 <Link
