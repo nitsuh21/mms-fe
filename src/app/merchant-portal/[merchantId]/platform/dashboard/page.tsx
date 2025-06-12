@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { FiTrendingUp, FiUsers, FiRefreshCw, FiUser, FiActivity } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiTrendingUp, FiUsers, FiRefreshCw, FiUser, FiActivity, FiFilter, FiCalendar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { format, subDays, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserData } from '@/types/auth';
 import { useRouter } from 'next/navigation';
@@ -22,17 +23,116 @@ interface DashboardResponse {
 }
 
 export default function PlatformDashboardPage() {
+  const startPickerRef = useRef<HTMLDivElement>(null);
+  const endPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (startPickerRef.current && !startPickerRef.current.contains(event.target as Node)) {
+        setShowStartDatePicker(false);
+      }
+      if (endPickerRef.current && !endPickerRef.current.contains(event.target as Node)) {
+        setShowEndDatePicker(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
-  const [dateRange, setDateRange] = useState('30d');
+  
+  // Initialize dates as Date objects
+  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [tempStartDate, setTempStartDate] = useState<Date>(startDate);
+  const [tempEndDate, setTempEndDate] = useState<Date>(endDate);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  const handleDateSelect = (date: Date, isStart: boolean) => {
+    if (isStart) {
+      setTempStartDate(date);
+      setShowStartDatePicker(false);
+    } else {
+      setTempEndDate(date);
+      setShowEndDatePicker(false);
+    }
+  };
+
+  const renderCalendar = (isStart: boolean) => {
+    const days = eachDayOfInterval({
+      start: startOfMonth(currentMonth),
+      end: endOfMonth(currentMonth)
+    });
+
+    return (
+      <div className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg p-4 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            className="p-1 hover:bg-gray-100 rounded dark:hover:bg-gray-700"
+          >
+            <FiChevronLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-lg font-semibold">
+            {format(currentMonth, 'MMMM yyyy')}
+          </h2>
+          <button
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="p-1 hover:bg-gray-100 rounded dark:hover:bg-gray-700"
+          >
+            <FiChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+            <div key={day} className="text-center text-sm font-medium text-gray-600 dark:text-gray-400">
+              {day}
+            </div>
+          ))}
+          {days.map(day => {
+            const isSelected = isStart
+              ? isSameDay(day, tempStartDate)
+              : isSameDay(day, tempEndDate);
+            const isToday = isSameDay(day, new Date());
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+
+            return (
+              <button
+                key={day.toString()}
+                onClick={() => handleDateSelect(day, isStart)}
+                className={`
+                  p-2 text-sm rounded-lg
+                  ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : ''}
+                  ${isSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}
+                  ${isToday && !isSelected ? 'border border-blue-500' : ''}
+                `}
+              >
+                {format(day, 'd')}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await api.get('/merchants/dashboard/');
+        setLoading(true);
+        const response = await api.get('/merchants/dashboard/', {
+          params: {
+            start_date: format(startDate, 'yyyy-MM-dd'),
+            end_date: format(endDate, 'yyyy-MM-dd')
+          }
+        });
         const dashboardData : DashboardResponse = response.data;
         setDashboardData(dashboardData);
         setError(null);
@@ -41,13 +141,14 @@ export default function PlatformDashboardPage() {
         setError('Failed to fetch dashboard data');
       } finally {
         setLoading(false);
+        setIsFiltering(false);
       }
     };
 
     if (isAuthenticated) {
       fetchDashboardData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, startDate, endDate]);
 
   const handleLogout = async () => {
     await logout();
@@ -83,30 +184,69 @@ export default function PlatformDashboardPage() {
     <div className="space-y-6 px-4 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Platform Overview</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Welcome, {(user as UserData)?.first_name}! View platform-wide performance and analytics
-          </p>
+          <h4 className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+            Welcome, {(user as UserData)?.first_name}! View general performance and analytics.
+          </h4>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700/70"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="12m">Last 12 months</option>
-          </select>
-          <button 
-            onClick={handleLogout}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-          >
-            <FiUsers className="h-4 w-4" />
-            Logout
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+              <div className="relative" ref={startPickerRef}>
+                <button
+                  onClick={() => {
+                    setShowEndDatePicker(false);
+                    setShowStartDatePicker(!showStartDatePicker);
+                    setCurrentMonth(tempStartDate);
+                  }}
+                  className="w-full sm:w-44 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700/70 text-left"
+                >
+                  {format(tempStartDate, 'MMM dd, yyyy')}
+                </button>
+                <FiCalendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                {showStartDatePicker && renderCalendar(true)}
+              </div>
+            </div>
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+              <div className="relative" ref={endPickerRef}>
+                <button
+                  onClick={() => {
+                    setShowStartDatePicker(false);
+                    setShowEndDatePicker(!showEndDatePicker);
+                    setCurrentMonth(tempEndDate);
+                  }}
+                  className="w-full sm:w-44 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700/70 text-left"
+                >
+                  {format(tempEndDate, 'MMM dd, yyyy')}
+                </button>
+                <FiCalendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                {showEndDatePicker && renderCalendar(false)}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setIsFiltering(true);
+                setStartDate(tempStartDate);
+                setEndDate(tempEndDate);
+              }}
+              disabled={isFiltering}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${isFiltering ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'} text-white`}
+            >
+              {isFiltering ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Filtering...
+                </>
+              ) : (
+                <>
+                  <FiFilter className="h-4 w-4" />
+                  Apply Filter
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

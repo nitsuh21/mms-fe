@@ -5,7 +5,7 @@ export interface Subscription {
   id: number;
   customer: Customer;
   plan: Plan;
-  status: 'active' | 'inactive' | 'expired';
+  status: 'AC' | 'PN' | 'PD' | 'CN' | 'TR' | 'EX';
   start_date: string;
   end_date: string;
   next_payment_date: string | null;

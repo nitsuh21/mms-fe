@@ -42,8 +42,18 @@ export interface MemberActivity {
 
 export interface DashboardData {
   metrics: {
-    firstRow: Metric[];
-    secondRow: Metric[];
+    members: {
+      total: number;
+      active: number;
+      newThisMonth: number;
+      growthPercent: number;
+    };
+    subscriptions: {
+      total: number;
+      active: number;
+      trial: number;
+      growthPercent: number;
+    };
     analytics: {
       subscriptionTrends: Array<{
         date: string;
@@ -54,6 +64,29 @@ export interface DashboardData {
         value: number;
         percentage: number;
       }>;
+    };
+    revenue: {
+      totalRevenue: number;
+      mrr: number;
+      growthPercent: number;
+    };
+    performance: {
+      performancePercent: number;
+      churnRate: number;
+      arpu: number;
+      growthPercent: number;
+    };
+    renewals: {
+      total: number;
+      thisMonth: number;
+      nextMonth: number;
+      growthRate: number;
+    };
+    campaigns: {
+      total: number;
+      active: number;
+      draft: number;
+      growthPercent: number;
     };
   };
   topPlans: MembershipPlan[];
@@ -72,14 +105,8 @@ class DashboardService {
     return DashboardService.instance;
   }
 
-  private getTrend(value: number): 'up' | 'down' | 'neutral' {
-    if (value > 0) return 'up';
-    if (value < 0) return 'down';
-    return 'neutral';
-  }
 
   public async getDashboardData(
-    merchantId: string,
     businessId: string,
     timeFilter: TimeFilter
   ): Promise<DashboardData> {
@@ -97,6 +124,8 @@ class DashboardService {
       // Get analytics data
       const analyticsResponse = await api.get(`/subscriptions/dashboard/${businessId}/analytics/`);
 
+      console.log('Analytics data:', analyticsResponse.data);
+
       // Combine and transform the data
       const mainData = response.data;
       const analyticsData = analyticsResponse.data;
@@ -104,57 +133,44 @@ class DashboardService {
       // Transform API data into dashboard metrics
       const dashboardData: DashboardData = {
         metrics: {
-          firstRow: [
-            {
-              title: 'Total Revenue',
-              value: mainData.total_revenue || 0,
-              icon: FiDollarSign,
-              trend: this.getTrend(mainData.revenue_growth || 0),
-              change: mainData.revenue_growth || 0,
-              subtitles: [
-                { text: 'Monthly Recurring', value: mainData.mrr || 0 },
-                { text: 'Annual Recurring', value: mainData.arr || 0 }
-              ]
-            },
-            {
-              title: 'Active Members',
-              value: mainData.active_members || 0,
-              icon: FiUsers,
-              trend: this.getTrend(mainData.member_growth || 0),
-              change: mainData.member_growth || 0,
-              subtitles: [
-                { text: 'New This Month', value: mainData.new_members || 0 },
-                { text: 'Churn Rate', value: `${mainData.churn_rate || 0}%` }
-              ]
-            },
-            {
-              title: 'Average Revenue',
-              value: mainData.average_revenue || 0,
-              icon: FiCreditCard,
-              trend: this.getTrend(mainData.arpu_growth || 0),
-              change: mainData.arpu_growth || 0,
-              subtitles: [
-                { text: 'Per User', value: mainData.arpu || 0 },
-                { text: 'Lifetime Value', value: mainData.ltv || 0 }
-              ]
-            },
-            {
-              title: 'Churn Rate',
-              value: `${mainData.churn_rate || 0}%`,
-              icon: FiTrendingDown,
-              trend: this.getTrend(-(mainData.churn_rate_growth || 0)),
-              change: -(mainData.churn_rate_growth || 0),
-              showAsPercentage: true,
-              subtitles: [
-                { text: 'Lost Members', value: mainData.churned_members || 0 },
-                { text: 'Revenue Lost', value: mainData.churned_revenue || 0 }
-              ]
-            }
-          ],
-          secondRow: [],
+          members: {
+            total: mainData.total_members || 0,
+            active: mainData.active_members || 0,
+            newThisMonth: mainData.new_members_this_month || 0,
+            growthPercent: mainData.member_growth || 0
+          },
+          subscriptions: {
+            total: mainData.total_subscriptions || 0,
+            active: mainData.active_subscriptions || 0,
+            trial: mainData.trial_subscriptions || 0,
+            growthPercent: mainData.subscription_growth || 0
+          },
+          revenue: {
+            totalRevenue: mainData.total_revenue || 0,
+            mrr: mainData.mrr || 0,
+            growthPercent: mainData.revenue_growth || 0
+          },
           analytics: {
-            subscriptionTrends: analyticsData.subscription_trends || [],
-            planDistribution: analyticsData.plan_distribution || []
+            subscriptionTrends: analyticsData.subscriptions?.trends || [],
+            planDistribution: analyticsData.subscriptions?.planDistribution || []
+          },
+          performance: {
+            performancePercent: mainData.performance_percent || 0,
+            churnRate: mainData.churn_rate || 0,
+            arpu: mainData.arpu || 0,
+            growthPercent: mainData.performance_growth || 0
+          },
+          renewals: {
+            total: mainData.total_renewals || 0,
+            thisMonth: mainData.this_month_renewals || 0,
+            nextMonth: mainData.next_month_renewals || 0,
+            growthRate: mainData.renewal_growth || 0
+          },
+          campaigns: {
+            total: mainData.total_campaigns || 0,
+            active: mainData.active_campaigns || 0,
+            draft: mainData.draft_campaigns || 0,
+            growthPercent: mainData.campaign_growth || 0
           }
         },
         topPlans: mainData.top_plans || [],
