@@ -32,6 +32,7 @@ export default function EditBusinessPage() {
       try {
         const response = await api.get<Business>(`/businesses/businesses/${businessId}/`);
         setFormData(response.data);
+        console.log('Fetched business:', response.data);
         setError(null);
       } catch (err) {
         console.error('Error fetching business:', err);
@@ -50,7 +51,15 @@ export default function EditBusinessPage() {
     setError(null);
 
     try {
-      await api.put(`/businesses/businesses/${businessId}/`, formData);
+      // console.log("Submitting payload:", formData);
+    // Filter out the cover_image and logo fields causing not null issue
+    const excludeKeys = ['cover_image', 'logo'];
+    const filteredPayload = Object.fromEntries(
+      Object.entries(formData).filter(([key]) => !excludeKeys.includes(key))
+    );
+
+      // console.log("Submitting filtered payload:", filteredPayload);
+      await api.put(`/businesses/businesses/${businessId}/`, filteredPayload);
       router.push(`/merchant-portal/${merchantId}/platform/businesses/${businessId}`);
       router.refresh();
     } catch (err: any) {
