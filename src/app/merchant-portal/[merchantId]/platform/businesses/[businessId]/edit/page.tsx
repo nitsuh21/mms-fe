@@ -18,6 +18,7 @@ export default function EditBusinessPage() {
     phone: "",
     address: "",
     location: "",
+    description: "", // Added description field
     currency: "ETB",
     currency_symbol: "Br",
     status: "active"
@@ -51,14 +52,11 @@ export default function EditBusinessPage() {
     setError(null);
 
     try {
-      // console.log("Submitting payload:", formData);
-    // Filter out the cover_image and logo fields causing not null issue
-    const excludeKeys = ['cover_image', 'logo'];
-    const filteredPayload = Object.fromEntries(
-      Object.entries(formData).filter(([key]) => !excludeKeys.includes(key))
-    );
+      const excludeKeys = ['cover_image', 'logo'];
+      const filteredPayload = Object.fromEntries(
+        Object.entries(formData).filter(([key]) => !excludeKeys.includes(key))
+      );
 
-      // console.log("Submitting filtered payload:", filteredPayload);
       await api.put(`/businesses/businesses/${businessId}/`, filteredPayload);
       router.push(`/merchant-portal/${merchantId}/platform/businesses/${businessId}`);
       router.refresh();
@@ -175,13 +173,13 @@ export default function EditBusinessPage() {
               htmlFor="location"
               className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
-              Location
+              Address
             </label>
             <input
               type="text"
               name="location"
               id="location"
-              value={formData.location}
+              value={formData.address}
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
             />
@@ -229,18 +227,20 @@ export default function EditBusinessPage() {
 
           <div className="sm:col-span-2">
             <label
-              htmlFor="address"
+              htmlFor="description" // Changed from "address" to "description"
               className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
-              Address
+              Description
             </label>
             <textarea
-              name="address"
-              id="address"
+              name="description" // Changed from "address" to "description"
+              id="description" // Changed from "address" to "description"
               rows={3}
-              value={formData.address}
+              value={formData.description || ''} // Changed to use formData.description
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-ceğiniz
+
+System: 3 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
             />
           </div>
         </div>
