@@ -148,11 +148,15 @@ export default function PlatformBusinessesPage() {
             <div className="col-span-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">{business.address || 'N/A'}</p>
             </div>
-            <div className="col-span-1">
+          <div className="col-span-1">
               <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${business.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  business.is_active
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                }`}
               >
-                {business.status === 'active' ? 'Active' : 'Inactive'}
+                {business.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div className="col-span-2">
