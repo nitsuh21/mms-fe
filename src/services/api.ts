@@ -19,7 +19,7 @@ const api = axios.create({
     'Accept': 'application/json'
   },
   withCredentials: true, // This is required for cookies/credentials
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Extract tenant ID from URL path
