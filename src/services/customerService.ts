@@ -19,7 +19,7 @@ export interface CreateCustomerData {
   business: number;
   first_name: string;
   last_name: string;
-  customer_id: string;
+  customer_id?: string;
   email: string;
   phone: string;
   is_active?: boolean;
