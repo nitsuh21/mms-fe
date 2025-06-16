@@ -190,7 +190,7 @@ export default function PlatformBusinessesPage() {
                   <FiEye className="h-4 w-4" />
                 </Link>
                 <Link
-                  href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}/edit`}
+                  href={`/merchant-portal/${merchantId}/businesses/${business.id}/settings`}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                   title="Edit"
                 >
