@@ -52,3 +52,30 @@ export interface MemberActivity {
   joinDate: string;
   expirationDate: string;
 }
+
+export interface DashboardResponse {
+  businesses: {
+    total: number;
+    active: number;
+    recent: number;
+    growth_rate: number;
+  };
+  members: {
+    total: number;
+    active: number;
+  };
+  affiliates: {
+    total: number;
+    active: number;
+  };
+  campaigns: {
+    total: number;
+    active: number;
+  };
+  subscriptions: {
+    total: number;
+    active: number;
+    monthly_revenue: number;
+  };
+  last_updated: string;
+}

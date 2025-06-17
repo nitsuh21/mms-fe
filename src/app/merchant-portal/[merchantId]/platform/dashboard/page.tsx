@@ -6,21 +6,10 @@ import { format, subDays, addMonths, subMonths, startOfMonth, endOfMonth, eachDa
 import { useAuth } from '@/contexts/AuthContext';
 import { UserData } from '@/types/auth';
 import { useRouter } from 'next/navigation';
-import api from '@/services/api';
+import { platformService } from '@/services/platformService';
+import type { DashboardResponse } from '@/types/platform';
 
-interface DashboardResponse {
-  total_businesses: number;
-  active_businesses: number;
-  inactive_businesses: number;
-  total_members: number;
-  active_members: number;
-  inactive_members: number;
-  total_customers: number;
-  active_customers: number;
-  inactive_customers: number;
-  business_growth_rate: number;
-  recent_businesses: number;
-}
+
 
 export default function PlatformDashboardPage() {
   const startPickerRef = useRef<HTMLDivElement>(null);
@@ -43,8 +32,8 @@ export default function PlatformDashboardPage() {
   const { user, isAuthenticated, logout } = useAuth();
   
   // Initialize dates as Date objects
-  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<[Date, Date]>([new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()]);
+  const [startDate, endDate] = dateRange;
   const [tempStartDate, setTempStartDate] = useState<Date>(startDate);
   const [tempEndDate, setTempEndDate] = useState<Date>(endDate);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -124,17 +113,11 @@ export default function PlatformDashboardPage() {
   };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/merchants/dashboard/', {
-          params: {
-            start_date: format(startDate, 'yyyy-MM-dd'),
-            end_date: format(endDate, 'yyyy-MM-dd')
-          }
-        });
-        const dashboardData : DashboardResponse = response.data;
-        setDashboardData(dashboardData);
+        const data = await platformService.getDashboardData(startDate, endDate);
+        setDashboardData(data);
         setError(null);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -146,7 +129,7 @@ export default function PlatformDashboardPage() {
     };
 
     if (isAuthenticated) {
-      fetchDashboardData();
+      fetchData();
     }
   }, [isAuthenticated, startDate, endDate]);
 
@@ -228,8 +211,7 @@ export default function PlatformDashboardPage() {
             <button
               onClick={() => {
                 setIsFiltering(true);
-                setStartDate(tempStartDate);
-                setEndDate(tempEndDate);
+                setDateRange([tempStartDate, tempEndDate]);
               }}
               disabled={isFiltering}
               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${isFiltering ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'} text-white`}
@@ -261,11 +243,11 @@ export default function PlatformDashboardPage() {
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Business Growth</p>
         </div>
         <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {dashboardData?.total_businesses} Total
+          {dashboardData?.businesses.total} Total
         </p>
         <div className="mt-2">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            {dashboardData?.business_growth_rate}% Growth
+            {dashboardData?.businesses.growth_rate}% Growth
           </span>
         </div>
       </div>
@@ -276,50 +258,56 @@ export default function PlatformDashboardPage() {
           <div className="p-2 bg-purple-100 rounded-full">
             <FiUsers className="h-6 w-6 text-purple-500" />
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Members</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Members</p>
         </div>
         <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {dashboardData?.active_members}
+          {dashboardData?.members.active} Active Members
         </p>
         <div className="mt-2">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-            {dashboardData?.total_members} Total
+            {dashboardData?.members.total} Total Members
           </span>
         </div>
       </div>
 
-      {/* Active Customers */}
+      {/* Campaigns & Affiliates */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="p-2 bg-green-100 rounded-full">
             <FiUser className="h-6 w-6 text-green-500" />
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Customers</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Campaigns & Affiliates</p>
         </div>
         <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {dashboardData?.active_customers}
+          {dashboardData?.campaigns.active} Active Campaigns
         </p>
-        <div className="mt-2">
+        <div className="mt-2 space-y-1">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-            {dashboardData?.total_customers} Total
+            {dashboardData?.campaigns.total} Total Campaigns
+          </span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            {dashboardData?.affiliates.active} Active Affiliates
           </span>
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Subscriptions */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="p-2 bg-orange-100 rounded-full">
             <FiActivity className="h-6 w-6 text-orange-500" />
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Recent Activity</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Subscriptions</p>
         </div>
         <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {dashboardData?.recent_businesses} New Businesses
+          ${dashboardData?.subscriptions.monthly_revenue.toLocaleString()}
         </p>
-        <div className="mt-2">
+        <div className="mt-2 space-y-1">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-            {dashboardData?.active_businesses} Active
+            {dashboardData?.subscriptions.active} Active
+          </span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
+            {dashboardData?.subscriptions.total} Total
           </span>
         </div>
       </div>
