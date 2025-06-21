@@ -62,6 +62,11 @@ api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    
+    // Skip redirect for /auth/signin requests
+    if (originalRequest?.url?.includes('/auth/signin')) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -94,16 +99,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const { response } = error;
+    console.error('Custom interceptor error:', { status: response?.status, data: response?.data }); // Log for debugging
     if (response) {
       // Handle different error statuses
       switch (response.status) {
         case 401:
-          // Don't immediately clear tokens - let the refresh interceptor handle it
+          // Let refresh interceptor handle 401
           break;
         case 403:
           throw new Error('Access denied');
         case 404:
           throw new Error('Resource not found');
+        case 400:
+          // Pass through 400 errors for specific handling in services
+          return Promise.reject(error);
         default:
           throw new Error(response.data?.detail || 'An error occurred');
       }

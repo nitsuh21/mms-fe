@@ -31,7 +31,7 @@ export class AuthService {
     localStorage.removeItem('user');
   }
 
-  static async signIn(credentials: { email: string; password: string }): Promise<AuthResponse> {
+static async signIn(credentials: { email: string; password: string }): Promise<AuthResponse> {
     try {
       this.clearTokens();
       const response = await api.post('/auth/signin/', credentials);
@@ -45,10 +45,13 @@ export class AuthService {
       
       return response.data;
     } catch (error: any) {
+      // console.error('Sign in error (full error):', JSON.stringify(error, null, 2)); // Detailed logging
+      // console.error('Sign in error has response:', !!error.response);
       if (error.response) {
         const { status, data } = error.response;
+        console.error('Sign in error response:', { status, data: JSON.stringify(data, null, 2) });
         if (status === 401) {
-          throw new Error('Invalid email or password. Please try again.');
+          throw new Error(data?.detail || 'Invalid email or password. Please try again.');
         } else if (status === 403) {
           throw new Error('Your account is locked. Please contact support.');
         } else if (status === 400 && data?.error) {
@@ -57,16 +60,18 @@ export class AuthService {
           throw new Error('Unable to sign in. Please try again later.');
         }
       }
+      console.error('No response in error, likely network issue');
       throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
-  static async signUp(userData: {
+static async signUp(userData: {
     email: string;
     password: string;
     confirm_password: string;
     first_name: string;
     last_name: string;
+    business_name?: string;
   }): Promise<AuthResponse> {
     try {
       const response = await api.post('/auth/signup/', userData);
@@ -80,12 +85,45 @@ export class AuthService {
       
       return response.data;
     } catch (error: any) {
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
+      // console.error('Sign up error (full error):', JSON.stringify(error, null, 2)); // Stringify for clarity
+      // console.error('Sign up error has response:', !!error.response); // Log if response exists
+      if (error.response) {
+        const { status, data } = error.response;
+        console.error('Sign up error response:', { status, data: JSON.stringify(data, null, 2) }); // Detailed response log
+        if (status === 400 || status === 409) { // Include 409 for conflicts
+          if (data?.email && Array.isArray(data.email) && data.email.length > 0) {
+            console.log('Email error detected:', data.email[0]);
+            throw new Error(data.email[0]);
+          }
+          if (data?.error && typeof data.error === 'string') {
+            console.log('Generic error detected:', data.error);
+            if (data.error.toLowerCase().includes('email')) {
+              throw new Error('This email is already registered.');
+            } else if (data.error.toLowerCase().includes('password')) {
+              throw new Error('Password must be at least 8 characters, include an uppercase letter and a number.');
+            } else {
+              throw new Error(data.error);
+            }
+          }
+          console.log('Fallback 400/409 error');
+          throw new Error('Invalid data provided. Please check your input.');
+        } else if (status === 422) {
+          console.log('422 error detected');
+          throw new Error('Invalid data provided. Please check your input.');
+        } else if (status === 429) {
+          console.log('429 error detected');
+          throw new Error('Too many sign-up attempts. Please try again later.');
+        } else {
+          console.log(`Unexpected status ${status}`);
+          throw new Error(`Server error (${status}). Please try again later.`);
+        }
       }
-      throw new Error('Sign up failed');
+      console.error('No response in error, likely network issue');
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
+  
+
 
   static getCurrentUser(): UserData | null {
     return AuthService.getUser();
