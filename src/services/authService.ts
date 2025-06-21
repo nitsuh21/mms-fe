@@ -1,3 +1,4 @@
+// mms-fe/src/services/authService.ts
 import { UserData, AuthResponse } from '@/types/auth';
 import api from './api';
 
@@ -44,10 +45,19 @@ export class AuthService {
       
       return response.data;
     } catch (error: any) {
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 401) {
+          throw new Error('Invalid email or password. Please try again.');
+        } else if (status === 403) {
+          throw new Error('Your account is locked. Please contact support.');
+        } else if (status === 400 && data?.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error('Unable to sign in. Please try again later.');
+        }
       }
-      throw new Error('Sign in failed');
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
@@ -169,6 +179,108 @@ export class AuthService {
         throw new Error(error.response.data.error);
       }
       throw new Error('Token refresh failed');
+    }
+  }
+
+//  Forgot password functionality
+    static async forgotPassword(email: string): Promise<{ message: string }> {
+    try {
+      const response = await api.post('/auth/forgot-password/', { email });
+      return {
+        message: response.data.message || 'Password reset OTP sent to your email.'
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 404) {
+          throw new Error('No account found with this email address.');
+        } else if (status === 400 && data?.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error('Unable to send password reset OTP. Please try again later.');
+        }
+      }
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+  }
+
+
+  // Reset password functionality
+  static async resetPassword(data: { email: string; password: string; confirm_password: string; token?: string }): Promise<{ message: string }> {
+    try {
+      const response = await api.post('/auth/reset-password/', data);
+      return {
+        message: response.data.message || 'Password reset successfully.'
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 400) {
+          if (data?.error.includes('password')) {
+            throw new Error('Password does not meet requirements. Must be at least 8 characters.');
+          } else if (data?.error.includes('confirm_password')) {
+            throw new Error('Passwords do not match.');
+          } else if (data?.error.includes('token')) {
+            throw new Error('Invalid or expired reset token. Please request a new OTP.');
+          } else {
+            throw new Error(data.error || 'Unable to reset password. Please try again.');
+          }
+        } else if (status === 404) {
+          throw new Error('No account found with this email address.');
+        } else {
+          throw new Error('Unable to reset password. Please try again later.');
+        }
+      }
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+  }
+
+  // Verify OTP functionality
+  static async verifyOTP(email: string, otp: string): Promise<{ message: string; token?: string }> {
+    try {
+      const response = await api.post('/auth/verify-otp/', { email, otp });
+      return {
+        message: response.data.message || 'OTP verified successfully.',
+        token: response.data.token // Optional token for password reset
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 400) {
+          throw new Error('Invalid or expired OTP. Please try again.');
+        } else if (status === 404) {
+          throw new Error('No account found with this email address.');
+        } else if (data?.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error('Unable to verify OTP. Please try again later.');
+        }
+      }
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+  }
+
+  // Resend OTP functionality
+  static async resendOTP(email: string): Promise<{ message: string }> {
+    try {
+      const response = await api.post('/auth/resend-otp/', { email });
+      return {
+        message: response.data.message || 'New OTP sent to your email.'
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 404) {
+          throw new Error('No account found with this email address.');
+        } else if (status === 429) {
+          throw new Error('Too many requests. Please wait before trying again.');
+        } else if (status === 400 && data?.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error('Unable to resend OTP. Please try again later.');
+        }
+      }
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 }
