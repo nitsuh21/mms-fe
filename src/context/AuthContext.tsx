@@ -2,20 +2,24 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { AuthService } from '@/services/authService';
 
 interface User {
-  id: string;
+  id: number;
   email: string;
   first_name: string;
   last_name: string;
-  role: string;
+  phone: string;
+  auth_provider?: string;
+  has_password?: boolean;
+  role: 'PA' | 'TA' | 'TS' | 'CU';
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, user: User) => void;
+  login: (accessToken: string, user: User) => void;
   logout: () => void;
 }
 
@@ -35,25 +39,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for stored user data on mount
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    // Check for stored user data and tokens on mount
+    const storedUser = AuthService.getUser();
+    const accessToken = AuthService.getAccessToken();
+    if (storedUser && accessToken) {
+      setUser(storedUser);
     }
     setIsLoading(false);
   }, []);
 
   const login = (accessToken: string, userData: User) => {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', 'refreshToken'); // added this line
-    localStorage.setItem('user', JSON.stringify(userData));
+    AuthService.setTokens({ access: accessToken, refresh: AuthService.getRefreshToken() || '' });
+    AuthService.setUser(userData);
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    AuthService.clearTokens();
     setUser(null);
     router.push('/auth/signin');
   };
@@ -79,4 +81,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}
