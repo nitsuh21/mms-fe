@@ -1,3 +1,4 @@
+// mms-fe/src/app/auth/signin/page.tsx
 "use client";
 
 import { useState } from 'react';
@@ -90,7 +91,7 @@ export default function SignInPage() {
       console.log('Initial sign-in response:', response);
 
       if (response.require_otp) {
-        router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}`);
+        router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}&purpose=login`); // Add purpose=login
       } else {
         setError('Unexpected response: OTP not required but no user data');
       }

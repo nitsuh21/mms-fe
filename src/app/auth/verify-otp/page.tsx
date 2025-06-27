@@ -27,12 +27,15 @@ export default function VerifyOTPPage() {
   const [resendSuccess, setResendSuccess] = useState('');
   const otpInputRefs = useRef<HTMLInputElement[]>([]);
 
+  // Get purpose from query parameter, default to 'login' if not provided
+  const purpose = searchParams?.get('purpose') || 'login';
+
   useEffect(() => {
     // Update email if query parameter changes
     const email = searchParams?.get('email') || '';
     setFormData(prev => ({ ...prev, email }));
-    console.log('Email updated to:', email);
-  }, [searchParams]);
+    console.log('Email updated to:', email, 'Purpose:', purpose);
+  }, [searchParams, purpose]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return; // Only allow numbers
@@ -74,7 +77,7 @@ export default function VerifyOTPPage() {
 
     const otpString = formData.otp.join('');
     console.log('Verify OTP form submission started');
-    console.log('Submitting with:', { email: formData.email, otp: otpString, purpose: 'login' });
+    console.log('Submitting with:', { email: formData.email, otp: otpString, purpose });
 
     setError('');
     setSuccess('');
@@ -93,7 +96,7 @@ export default function VerifyOTPPage() {
     }
 
     try {
-      const response = await AuthService.verifyOTP(formData.email, otpString, 'login');
+      const response = await AuthService.verifyOTP(formData.email, otpString, purpose);
       console.log('OTP verification response:', response);
 
       if ('access' in response && 'refresh' in response && 'user' in response) {
@@ -141,7 +144,7 @@ export default function VerifyOTPPage() {
       setLoading(false);
       console.log('Verify OTP form submission completed');
     }
-  }, [formData.email, formData.otp, router, login]);
+  }, [formData.email, formData.otp, router, login, purpose]);
 
   const handleResendOTP = useCallback(async () => {
     console.log('Resend OTP button clicked, email:', formData.email);
@@ -160,7 +163,7 @@ export default function VerifyOTPPage() {
 
     try {
       console.log('Attempting to resend OTP for:', formData.email);
-      const response = await AuthService.resendOTP(formData.email);
+      const response = await AuthService.resendOTP(formData.email, purpose); // Pass purpose
       console.log('Resend OTP response:', response);
       setResendSuccess(response.message || 'OTP resent successfully');
     } catch (err: unknown) {
@@ -179,7 +182,7 @@ export default function VerifyOTPPage() {
       setResendLoading(false);
       console.log('Resend OTP process completed');
     }
-  }, [formData.email]);
+  }, [formData.email, purpose]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 px-4 py-12 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 relative overflow-hidden">

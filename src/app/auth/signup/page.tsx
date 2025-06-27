@@ -1,3 +1,4 @@
+// mms-fe/src/app/auth/signup/page.tsx
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
@@ -10,7 +11,6 @@ import { AuthService } from '@/services/authService';
 import { SignUpData } from '@/types/auth';
 
 interface FormData extends SignUpData {}
-
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -130,9 +130,11 @@ export default function SignUpPage() {
         business_name: businessName.trim() || undefined,
       };
       const response = await AuthService.signUp(signUpData);
-      setFormData(prev => ({ ...prev, id: response.user.id }));
-      setSuccess('Account created successfully! Redirecting to dashboard...');
-      setTimeout(() => router.push('/merchant-portal'), 2000); // Redirect after 2s
+      // setFormData(prev => ({ ...prev, id: response.user.id }));
+      setSuccess('Account created successfully! Redirecting to verify OTP...');
+      console.log('Sign up successful:', response);
+      setTimeout(() => router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}&purpose=signup`), 2000); // Add purpose=signup
+
     } catch (err: unknown) {
       console.error('Sign up error in frontend:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');

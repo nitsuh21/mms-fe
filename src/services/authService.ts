@@ -81,9 +81,9 @@ export class AuthService {
     }
   }
 
-  static async resendOTP(email: string): Promise<{ message: string }> {
+  static async resendOTP(email: string, purpose: string): Promise<{ message: string }> {
     try {
-      const response = await api.post('/auth/resend-otp/', { email });
+      const response = await api.post('/auth/resend-otp/', { email , purpose });
       return { message: response.data.message || 'New OTP sent to your email.' };
     } catch (error: any) {
       if (error.response) {
@@ -114,8 +114,6 @@ export class AuthService {
     try {
       const response = await api.post('/auth/signup/', userData);
       const { access, refresh, user } = response.data;
-      this.setTokens({ access, refresh });
-      this.setUser(user);
       return response.data;
     } catch (error: any) {
       if (error.response) {
