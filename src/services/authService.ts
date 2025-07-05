@@ -223,7 +223,7 @@ export class AuthService {
 
   static async forgotPassword(email: string): Promise<{ message: string }> {
     try {
-      const response = await api.post('/auth/forgot-password/', { email });
+      const response = await api.post('/auth/password-reset/', { email });
       return { message: response.data.message || 'Password reset OTP sent to your email.' };
     } catch (error: any) {
       if (error.response) {

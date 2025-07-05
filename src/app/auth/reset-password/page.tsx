@@ -4,8 +4,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import { AuthService } from '@/services/authService';
+import { motion } from 'framer-motion';
 
 interface FormData {
   email: string;
@@ -63,7 +64,7 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('Reset password form submission started'); // Debug log
+    console.log('Reset password form submission started');
 
     setError('');
     setSuccess('');
@@ -101,39 +102,61 @@ export default function ResetPasswordPage() {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
-      console.log('Reset password form submission completed'); // Debug log
+      console.log('Reset password form submission completed');
     }
   }, [formData, searchParams, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 relative">
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-12 relative overflow-hidden">
+      {/* Logo in top left corner */}
+      <Link href="/" className="absolute top-10 left-10 z-50">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center"
+        >
+          <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="ml-2 text-xl font-bold text-gray-800">Eytta</span>
+        </motion.div>
+      </Link>
+
+      <div className="w-full max-w-md space-y-8 bg-white rounded-3xl shadow-lg p-8 relative overflow-hidden z-10">
+        {/* Decorative Elements */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-100 blur-3xl" />
+
+
         {/* Loading Overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 dark:bg-gray-800/50 z-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent"></div>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-20 rounded-3xl">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
           </div>
         )}
+        
         {/* Title and Links */}
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <div className="text-center relative z-20">
+          <FiLock className="mx-auto h-12 w-12 text-blue-600" />
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700">
             Reset Your Password
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Enter a new password for your account.
+          <p className="mt-2 text-sm text-gray-600">
+            Enter a new password for your account
           </p>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-600">
             Return to{' '}
             <Link
               href="/auth/signin"
-              className="font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400"
+              className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 hover:underline"
             >
               Sign in
             </Link>
             {' '}or{' '}
             <Link
               href="/auth/forgot-password"
-              className="font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400"
+              className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 hover:underline"
             >
               Forgot Password
             </Link>
@@ -141,12 +164,12 @@ export default function ResetPasswordPage() {
         </div>
 
         {/* Reset Password Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-label="Reset password form" noValidate>
-          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <form className="mt-6 space-y-6" onSubmit={handleSubmit} aria-label="Reset password form" noValidate>
+          <div className="space-y-4 rounded-xl bg-white p-6 shadow-sm ">
             {error && (
               <div
                 id="error-message"
-                className="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-400"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200 shadow-sm"
                 role="alert"
               >
                 {error}
@@ -155,7 +178,7 @@ export default function ResetPasswordPage() {
             {success && (
               <div
                 id="success-message"
-                className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/50 dark:text-green-400"
+                className="rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200 shadow-sm"
                 role="alert"
               >
                 {success}
@@ -165,7 +188,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 Email address
                 <span className="sr-only">(required)</span>
@@ -183,7 +206,7 @@ export default function ResetPasswordPage() {
                   value={formData.email}
                   onChange={handleChange}
                   aria-describedby={error ? 'error-message' : success ? 'success-message' : undefined}
-                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
                   placeholder="Enter your email"
                 />
               </div>
@@ -192,7 +215,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 New Password
                 <span className="sr-only">(required)</span>
@@ -210,7 +233,7 @@ export default function ResetPasswordPage() {
                   value={formData.password}
                   onChange={handleChange}
                   aria-describedby={error ? 'error-message' : success ? 'success-message' : undefined}
-                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
                   placeholder="Enter new password"
                 />
                 <button
@@ -231,7 +254,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="confirm_password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 Confirm Password
                 <span className="sr-only">(required)</span>
@@ -249,7 +272,7 @@ export default function ResetPasswordPage() {
                   value={formData.confirm_password}
                   onChange={handleChange}
                   aria-describedby={error ? 'error-message' : success ? 'success-message' : undefined}
-                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
                   placeholder="Confirm new password"
                 />
                 <button
@@ -270,8 +293,8 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`flex w-full justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-600 ${
-                loading ? 'opacity-70 cursor-not-allowed' : ''
+              className={`flex w-full justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ${
+                loading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-md'
               }`}
             >
               {loading ? 'Resetting...' : 'Reset Password'}
