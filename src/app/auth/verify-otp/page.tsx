@@ -1,3 +1,4 @@
+// mms-fe/src/app/auth/verify-otp/page.tsx
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -6,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
 import { AuthService } from '@/services/authService';
 import { useAuth } from '@/context/AuthContext';
+import { motion } from 'framer-motion';
 
 interface FormData {
   email: string;
@@ -185,49 +187,58 @@ export default function VerifyOTPPage() {
   }, [formData.email, purpose]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 px-4 py-12 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 left-10 w-24 h-24 rounded-full bg-brand-600/20 animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-32 h-32 rounded-full bg-purple-500/20 animate-pulse delay-1000" />
-        <svg className="absolute inset-0 w-full h-full opacity-10 dark:opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M0,50 Q25,0 50,50 T100,50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="2" />
-          <path d="M0,50 Q25,100 50,50 T100,50" fill="none" stroke="rgba(139, 92, 246, 0.1)" strokeWidth="2" />
-        </svg>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-12 relative overflow-hidden">
+      {/* Logo in top left corner */}
+      <Link href="/" className="absolute top-10 left-10 z-50">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center"
+        >
+          <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="ml-2 text-xl font-bold text-gray-800">Eytta</span>
+        </motion.div>
+      </Link>
 
-      <div className="w-full max-w-md space-y-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 relative overflow-hidden z-10">
+      {/* Animated Background */}
+
+
+      <div className="w-full max-w-md space-y-8 bg-white rounded-3xl shadow-lg p-8 relative overflow-hidden z-10">
         {/* Decorative Elements */}
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-brand-600/15 blur-3xl animate-spin-slow" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-purple-500/15 blur-3xl animate-spin-slow delay-1000" />
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-100 blur-3xl" />
+
 
         <div className="text-center relative z-20">
-          <FiMail className="mx-auto h-12 w-12 text-brand-600 animate-pulse-slow" />
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-brand-700 dark:text-white">
-            Verify OTP with <span className="text-brand-600 dark:text-brand-500">X</span>
+          <FiMail className="mx-auto h-12 w-12 text-blue-600" />
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700">
+            Verify OTP
           </h2>
           
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
               Code sent to:
             </p>
-            <p className="font-medium text-gray-900 dark:text-white mt-1">
+            <p className="font-medium text-gray-900 mt-1">
               {formData.email}
             </p>
           </div>
           
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-600">
             Return to{' '}
             <Link
               href="/auth/signin"
-              className="font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400 transition-colors duration-200 hover:underline"
+              className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 hover:underline"
             >
               Sign in
             </Link>
             {' '}or{' '}
             <Link
               href="/auth/forgot-password"
-              className="font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400 transition-colors duration-200 hover:underline"
+              className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 hover:underline"
             >
               Forgot Password
             </Link>
@@ -235,10 +246,10 @@ export default function VerifyOTPPage() {
         </div>
 
         <form className="mt-6 space-y-6" onSubmit={handleSubmit} onPaste={handlePaste}>
-          <div className="space-y-4 rounded-xl bg-white/90 dark:bg-gray-800/90 p-6 shadow-md">
+          <div className="space-y-4 rounded-xl bg-white p-6 shadow-sm ">
             {error && (
               <div
-                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-200/50 dark:border-red-800/50 shadow-sm"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200 shadow-sm"
                 role="alert"
               >
                 {error}
@@ -246,7 +257,7 @@ export default function VerifyOTPPage() {
             )}
             {resendSuccess && (
               <div
-                className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200/50 dark:border-green-800/50 shadow-sm"
+                className="rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200 shadow-sm"
                 role="alert"
               >
                 {resendSuccess}
@@ -254,7 +265,7 @@ export default function VerifyOTPPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Enter 6-digit code
               </label>
               <div className="flex justify-between space-x-2">
@@ -268,7 +279,7 @@ export default function VerifyOTPPage() {
                     value={formData.otp[index]}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="w-full h-14 text-center text-2xl font-semibold rounded-lg border border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    className="w-full h-14 text-center text-2xl font-semibold rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                     autoFocus={index === 0}
                   />
                 ))}
@@ -280,7 +291,7 @@ export default function VerifyOTPPage() {
                 type="button"
                 onClick={handleResendOTP}
                 disabled={resendLoading || loading}
-                className={`text-sm font-medium text-brand-600 hover:text-brand-500 dark:text-brand-500 dark:hover:text-brand-400 transition-colors duration-200 ${
+                className={`text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 ${
                   (resendLoading || loading) ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
@@ -289,7 +300,7 @@ export default function VerifyOTPPage() {
               <button
                 type="submit"
                 disabled={loading || resendLoading}
-                className={`flex items-center justify-center rounded-lg bg-gradient-to-r from-brand-600 to-brand-700 px-4 py-2 text-sm font-medium text-white hover:from-brand-700 hover:to-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all duration-200 ${
+                className={`flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ${
                   (loading || resendLoading) ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-md'
                 }`}
               >
@@ -303,19 +314,6 @@ export default function VerifyOTPPage() {
           </div>
         </form>
       </div>
-
-      <style jsx global>{`
-        @keyframes spin-slow {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse-slow {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        .animate-spin-slow { animation: spin-slow 15s linear infinite; }
-        .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
-      `}</style>
     </div>
   );
 }

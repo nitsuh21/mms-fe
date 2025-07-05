@@ -1,10 +1,9 @@
-// mms-fe/src/app/auth/signin/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiClock, FiHeadphones, FiLink, FiArrowRight } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { motion, cubicBezier } from 'framer-motion';
 import { AuthService } from '@/services/authService';
 
@@ -20,7 +19,7 @@ const containerVariants = {
     y: 0, 
     transition: { 
       duration: 0.6, 
-      ease: cubicBezier(0.16, 1, 0.3, 1) // equivalent to 'easeOut'
+      ease: cubicBezier(0.16, 1, 0.3, 1)
     } 
   },
 };
@@ -32,21 +31,58 @@ const itemVariants = {
     transition: { 
       duration: 0.5, 
       delay: 0.2,
-      ease: cubicBezier(0.42, 0, 0.58, 1) // equivalent to 'easeInOut'
+      ease: cubicBezier(0.42, 0, 0.58, 1)
     } 
   },
 };
 
-const featureCardVariants = {
-  hover: { 
-    y: -5,
-    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-    transition: { 
-      duration: 0.3,
-      ease: cubicBezier(0.42, 0, 0.58, 1) // equivalent to 'easeInOut'
-    }
+const businessFeatures = [
+  {
+    title: "Affiliate Management",
+    description: "Track and manage your affiliate partners with ease.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    )
+  },
+  {
+    title: "Business Analytics",
+    description: "Gain insights into your business performance with detailed reports and dashboards.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    )
+  },
+  {
+    title: "Customer CRM",
+    description: "Manage customer relationships and track interactions to improve service.",
+     icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+      </svg>
+    )
+  },
+  {
+    title: "Subscription Management",
+    description: "Easily manage customer subscriptions and billing cycles.",
+     icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+      </svg>
+    )
+  },
+  {
+    title: "Payment Processing",
+    description: "Securely process payments with multiple gateways and currencies.",
+     icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    )
   }
-};
+];
 
 export default function SignInPage() {
   const [formData, setFormData] = useState<FormData>({
@@ -57,24 +93,66 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const slideInterval = useRef<NodeJS.Timeout | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setError(''); // Clear error on input change
+    setError('');
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword(prev => !prev);
   };
 
+  const scrollToSlide = (index: number) => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const slideWidth = container.clientWidth;
+      container.scrollTo({
+        left: index * slideWidth,
+        behavior: 'smooth'
+      });
+      setCurrentSlide(index);
+    }
+  };
+
+  const scrollLeft = () => {
+    const newIndex = (currentSlide - 1 + businessFeatures.length) % businessFeatures.length;
+    scrollToSlide(newIndex);
+  };
+
+  const scrollRight = () => {
+    const newIndex = (currentSlide + 1) % businessFeatures.length;
+    scrollToSlide(newIndex);
+  };
+
+  const startAutoSlide = () => {
+    stopAutoSlide();
+    slideInterval.current = setInterval(() => {
+      scrollRight();
+    }, 5000);
+  };
+
+  const stopAutoSlide = () => {
+    if (slideInterval.current) {
+      clearInterval(slideInterval.current);
+    }
+  };
+
+  useEffect(() => {
+    startAutoSlide();
+    return () => stopAutoSlide();
+  }, [currentSlide]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Basic client-side validation
     if (!formData.email.includes('@') || !formData.email.includes('.')) {
       setError('Please enter a valid email address');
       setLoading(false);
@@ -91,7 +169,7 @@ export default function SignInPage() {
       console.log('Initial sign-in response:', response);
 
       if (response.require_otp) {
-        router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}&purpose=login`); // Add purpose=login
+        router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}&purpose=login`);
       } else {
         setError('Unexpected response: OTP not required but no user data');
       }
@@ -104,334 +182,313 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 px-4 py-12 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 relative overflow-hidden">
-      {/* Animated Background Particles */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 left-10 w-24 h-24 rounded-full bg-brand-600/20 animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-32 h-32 rounded-full bg-purple-500/20 animate-pulse delay-1000" />
-        <svg className="absolute inset-0 w-full h-full opacity-10 dark:opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M0,50 Q25,0 50,50 T100,50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="2" />
-          <path d="M0,50 Q25,100 50,50 T100,50" fill="none" stroke="rgba(139, 92, 246, 0.1)" strokeWidth="2" />
-        </svg>
+    <div className="flex min-h-screen bg-white flex-col md:flex-row p-5 md:p-0 relative overflow-hidden">
+      {/* Logo in top left corner */}
+      <Link href="/" className="absolute top-10 left-10 z-50">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center"
+        >
+          <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="ml-2 text-xl font-bold text-gray-800">Eytta</span>
+        </motion.div>
+      </Link>
+
+      {/* Sign In Form Section (White) - Left Side */}
+      <div className="w-full md:w-1/2 flex items-center justify-center px-4 py-8 md:py-12">
+        <motion.div 
+          className="w-full max-w-md space-y-6 md:space-y-8 p-6 md:p-10 relative z-10"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={itemVariants}>
+            <div className="text-start relative z-20">
+              <h2 className="mt-2 md:mt-4 text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900">
+                Welcome Back
+              </h2>
+              <p className="mt-2 md:mt-4 text-sm md:text-base text-gray-600">
+                Don't have an account?{' '}
+                <Link
+                  href="/auth/signup"
+                  className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
+                >
+                  Create one now
+                </Link>
+              </p>
+            </div>
+
+            <form className="mt-6 md:mt-8 space-y-4 md:space-y-6" onSubmit={handleSubmit} aria-label="Sign in form">
+              <div className="space-y-4 md:space-y-5">
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl bg-red-50 p-3 md:p-4 text-sm font-medium text-red-700 border border-red-200 shadow-sm"
+                    role="alert"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                <div>
+                  <label 
+                    htmlFor="email" 
+                    className="block text-sm md:text-base font-semibold text-gray-700 mb-1 md:mb-2"
+                  >
+                    Email Address
+                    <span className="sr-only">(required)</span>
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 md:pl-4">
+                      <FiMail className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      aria-describedby={error ? 'error-message' : undefined}
+                      className="block w-full rounded-xl border border-gray-200 bg-white pl-10 md:pl-12 pr-4 py-2 md:py-3 text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 ease-in-out hover:border-gray-300 hover:shadow-sm"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label 
+                    htmlFor="password" 
+                    className="block text-sm md:text-base font-semibold text-gray-700 mb-1 md:mb-2"
+                  >
+                    Password
+                    <span className="sr-only">(required)</span>
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 md:pl-4">
+                      <FiLock className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      aria-describedby={error ? 'error-message' : undefined}
+                      className="block w-full rounded-xl border border-gray-200 bg-white pl-10 md:pl-12 pr-10 md:pr-12 py-2 md:py-3 text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 ease-in-out hover:border-gray-300 hover:shadow-sm"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 md:pr-4 focus:outline-none hover:text-blue-600 transition-colors duration-200"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <FiEyeOff className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                      ) : (
+                        <FiEye className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="remember-me"
+                      name="refreshToken"
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all duration-200"
+                    />
+                    <label 
+                      htmlFor="remember-me" 
+                      className="ml-2 block text-sm md:text-base font-medium text-gray-700"
+                    >
+                      Remember me
+                    </label>
+                  </div>
+
+                  <div className="text-sm md:text-base">
+                    <Link
+                      href="/auth/forgot-password"
+                      className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                </div>
+
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  className={`group flex w-full justify-center rounded-xl bg-blue-600 px-4 py-2.5 md:px-6 md:py-3.5 text-sm md:text-base font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 ${
+                    loading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-md'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {loading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin h-4 w-4 md:h-5 md:w-5 mr-2 text-white" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      Signing in...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      Sign in
+                      <FiChevronRight className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:translate-x-1" />
+                    </span>
+                  )}
+                </motion.button>
+              </div>
+            </form>
+
+            <div className="relative mt-6 md:mt-8">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-sm md:text-base">
+                <span className="px-2 bg-white text-gray-500 font-medium">
+                  Eytta
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
 
-      <motion.div 
-        className="w-full max-w-7xl flex flex-col md:flex-row items-center justify-between gap-8"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Sign In Form */}
+      {/* Information Section (Dim Blue) - Right Side - Hidden on small screens */}
+      <div className="hidden md:flex md:w-1/2 items-center justify-center bg-blue-50 px-6 md:px-10 py-8 md:py-12 relative rounded-tl-4xl">
         <motion.div 
-          className="w-full md:w-1/2 lg:w-2/5 space-y-8 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-3xl shadow-2xl p-10 border border-gray-200/30 dark:border-gray-700/30 relative overflow-hidden z-10"
-          variants={itemVariants}
+          className="w-full max-w-2xl space-y-6 md:space-y-8 p-6 md:p-10 relative z-10"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          {/* Decorative Elements */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-brand-600/15 blur-3xl animate-spin-slow" />
-          <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-purple-500/15 blur-3xl animate-spin-slow delay-1000" />
+          <motion.div variants={itemVariants}>
+            <div className="relative z-20">
+              <h3 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4 md:mb-6 leading-tight">
+                Elevate Your <span className="text-blue-600">Business</span> Operations
+              </h3>
+              <p className="text-base md:text-lg text-gray-600 leading-relaxed mb-6 md:mb-8">
+                Discover how our platform can transform your business workflow
+              </p>
 
-          <div className="text-center relative z-20">
-            {/* Dummy Logo */}
-            <motion.svg
-              className="mx-auto h-16 w-16 text-brand-600 animate-pulse-slow"
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              variants={itemVariants}
-            >
-              <circle cx="50" cy="50" r="40" fill="currentColor" />
-              <path d="M30 30 L70 70 M70 30 L30 70" stroke="white" strokeWidth="8" strokeLinecap="round" />
-            </motion.svg>
-            <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-brand-700 animate-pulse-slow">
-              Welcome Back
-            </h2>
-            <p className="mt-4 text-base text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link
-                href="/auth/signup"
-                className="font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors duration-200 hover:underline"
-              >
-                Create one now
-              </Link>
-            </p>
-          </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-label="Sign in form">
-            <div className="space-y-5">
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800/50 shadow-md"
-                  role="alert"
-                >
-                  {error}
-                </motion.div>
-              )}
-
-              <div>
-                <label 
-                  htmlFor="email" 
-                  className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
-                >
-                  Email Address
-                  <span className="sr-only">(required)</span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                    <FiMail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    aria-describedby={error ? 'error-message' : undefined}
-                    className="block w-full rounded-xl border border-gray-200 bg-white/80 pl-12 pr-4 py-3 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/50 dark:border-gray-600 dark:bg-gray-700/80 dark:text-white dark:placeholder-gray-400 transition-all duration-200 ease-in-out hover:border-gray-300 hover:shadow-sm"
-                    placeholder="Enter your email"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label 
-                  htmlFor="password" 
-                  className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
-                >
-                  Password
-                  <span className="sr-only">(required)</span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                    <FiLock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    aria-describedby={error ? 'error-message' : undefined}
-                    className="block w-full rounded-xl border border-gray-200 bg-white/80 pl-12 pr-12 py-3 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/50 dark:border-gray-600 dark:bg-gray-700/80 dark:text-white dark:placeholder-gray-400 transition-all duration-200 ease-in-out hover:border-gray-300 hover:shadow-sm"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-0 flex items-center pr-4 focus:outline-none hover:text-brand-600 dark:hover:text-brand-400 transition-colors duration-200"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+              <div className="relative">
+                <div className="flex items-center">
+                  <button 
+                    onClick={scrollLeft}
+                    className="mr-4 z-10 bg-white p-1 rounded-full shadow-sm border border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label="Scroll left"
                   >
-                    {showPassword ? (
-                      <FiEyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <FiEye className="h-5 w-5 text-gray-400" />
-                    )}
+                    <FiChevronLeft className="h-3 w-3 md:h-4 md:w-4 text-gray-700" />
+                  </button>
+                  
+                  <div 
+                    ref={scrollContainerRef}
+                    className="flex-1 overflow-x-hidden py-2 md:py-4 scroll-smooth"
+                    onMouseEnter={stopAutoSlide}
+                    onMouseLeave={startAutoSlide}
+                  >
+                    <div className="flex w-full">
+                      {businessFeatures.map((feature, index) => (
+                        <div key={index} className="flex-shrink-0 w-full">
+                          <motion.div
+                            className="w-full bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-all duration-300 mx-1"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 p-1 md:p-2 rounded-lg bg-blue-100 text-blue-600">
+                                {feature.icon}
+                              </div>
+                              <div className="ml-3 md:ml-4">
+                                <h4 className="text-base md:text-lg font-semibold text-gray-900">{feature.title}</h4>
+                                <p className="mt-1 md:mt-2 text-xs md:text-sm text-gray-600">{feature.description}</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={scrollRight}
+                    className="ml-4 z-10 bg-white p-1 rounded-full shadow-sm border border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label="Scroll right"
+                  >
+                    <FiChevronRight className="h-3 w-3 md:h-4 md:w-4 text-gray-700" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="refreshToken"
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 transition-all duration-200"
+              {/* Slide indicators */}
+              <div className="flex justify-center mt-4 md:mt-6 space-x-1 md:space-x-2">
+                {businessFeatures.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => scrollToSlide(index)}
+                    className={`h-1.5 w-1.5 md:h-2 md:w-2 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-blue-600 w-4 md:w-6' : 'bg-gray-300'}`}
+                    aria-label={`Go to slide ${index + 1}`}
                   />
-                  <label 
-                    htmlFor="remember-me" 
-                    className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors duration-200 hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                ))}
               </div>
 
-              <motion.button
-                type="submit"
-                disabled={loading}
-                className={`group flex w-full justify-center rounded-xl bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-3.5 text-base font-semibold text-white hover:from-brand-700 hover:to-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:from-brand-500 dark:to-brand-600 dark:hover:from-brand-600 dark:hover:to-brand-700 transition-all duration-300 ${
-                  loading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-xl hover:glow'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                    Signing in...
-                  </span>
-                ) : (
-                  <span className="flex items-center">
-                    Sign in
-                    <FiArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:translate-x-1" />
-                  </span>
-                )}
-              </motion.button>
-            </div>
-          </form>
-
-          {/* Social login options */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white/95 dark:bg-gray-800/95 text-gray-500 dark:text-gray-400 font-medium">
-                Eytta
-              </span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Info Section */}
-        <motion.div 
-          className="w-full md:w-1/2 lg:w-3/5 space-y-8 p-10 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-200/30 dark:border-gray-700/30 relative overflow-hidden z-10"
-          variants={itemVariants}
-        >
-          {/* Decorative Elements */}
-          <div className="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-brand-600/15 blur-3xl animate-spin-slow" />
-          <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-purple-500/15 blur-3xl animate-spin-slow delay-1000" />
-
-          <div className="relative z-20">
-            <h3 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-brand-700 mb-6 leading-tight animate-pulse-slow">
-              Elevate Your <span className="text-white-600 dark:text-brand-400 ">Business</span> Experience with <span className="text-white-600 dark:text-brand-400 "> X</span>
-            </h3>
-            <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8">
-              Sign in to access powerful tools designed to streamline your operations and boost productivity.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <motion.div 
-                className="p-5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-md hover:shadow-lg transition-all duration-300"
-                variants={featureCardVariants}
-                whileHover="hover"
-              >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 p-2 rounded-lg bg-brand-100/50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400">
-                    <FiShield className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Secure Authentication</h4>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                      Industry-leading security to protect your business data.
+              <div className="mt-8 md:mt-10 pt-4 md:pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
+                  <div>
+                    <h4 className="text-base md:text-lg font-semibold text-gray-900">Ready to transform your business?</h4>
+                    <p className="text-sm md:text-base text-gray-600">
+                      Join thousands of businesses thriving on our platform.
                     </p>
                   </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="p-5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-md hover:shadow-lg transition-all duration-300"
-                variants={featureCardVariants}
-                whileHover="hover"
-              >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 p-2 rounded-lg bg-brand-100/50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400">
-                    <FiClock className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Real-Time Management</h4>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                      Monitor and manage your business operations instantly.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="p-5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-md hover:shadow-lg transition-all duration-300"
-                variants={featureCardVariants}
-                whileHover="hover"
-              >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 p-2 rounded-lg bg-brand-100/50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400">
-                    <FiHeadphones className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">24/7 Support</h4>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                      Dedicated customer support whenever you need it.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="p-5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-md hover:shadow-lg transition-all duration-300"
-                variants={featureCardVariants}
-                whileHover="hover"
-              >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 p-2 rounded-lg bg-brand-100/50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400">
-                    <FiLink className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Seamless Integrations</h4>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                      Connect with your existing business tools effortlessly.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Ready to get started with X?</h4>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Join thousands of businesses thriving on our platform.
-                  </p>
-                </div>
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Link
-                    href="/auth/signup"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-xl font-semibold hover:from-brand-700 hover:to-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:from-brand-500 dark:to-brand-600 dark:hover:from-brand-600 dark:hover:to-brand-700 transition-all duration-300 hover:shadow-xl"
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    Create Free Account
-                    <FiArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </motion.div>
+                    <Link
+                      href="/auth/signup"
+                      className="inline-flex items-center px-4 py-2 md:px-6 md:py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                    >
+                      Create Account
+                      <FiChevronRight className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4" />
+                    </Link>
+                  </motion.div>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
 
+      {/* Add this to your global CSS */}
       <style jsx global>{`
-        @keyframes spin-slow {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        .scroll-smooth {
+          scroll-behavior: smooth;
         }
-        @keyframes pulse-slow {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
+        .overflow-x-hidden::-webkit-scrollbar {
+          display: none;
         }
-        .animate-spin-slow { animation: spin-slow 15s linear infinite; }
-        .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
-        .hover\:glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .overflow-x-hidden {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
     </div>
   );
