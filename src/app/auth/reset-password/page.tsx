@@ -4,13 +4,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight, FiKey } from 'react-icons/fi';
 import { AuthService } from '@/services/authService';
 import { motion } from 'framer-motion';
 
 interface FormData {
   email: string;
-  password: string;
+  otp_code: string;
+  new_password: string;
   confirm_password: string;
 }
 
@@ -19,7 +20,8 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState<FormData>({
     email: searchParams?.get('email') || '',
-    password: '',
+    otp_code: '',
+    new_password: '',
     confirm_password: ''
   });
   const [error, setError] = useState('');
@@ -76,27 +78,31 @@ export default function ResetPasswordPage() {
       setLoading(false);
       return;
     }
-    if (formData.password.length < 8) {
+    if (!formData.otp_code || formData.otp_code.length !== 6) {
+      setError('Please enter a valid 6-digit OTP code');
+      setLoading(false);
+      return;
+    }
+    if (formData.new_password.length < 8) {
       setError('Password must be at least 8 characters long');
       setLoading(false);
       return;
     }
-    if (formData.password !== formData.confirm_password) {
+    if (formData.new_password !== formData.confirm_password) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
     try {
-      const token = searchParams?.get('token') || undefined;
       const response = await AuthService.resetPassword({
         email: formData.email,
-        password: formData.password,
-        confirm_password: formData.confirm_password,
-        token
+        otp_code: formData.otp_code,
+        new_password: formData.new_password,
+        confirm_password: formData.confirm_password
       });
       setSuccess(response.message);
-      setFormData(prev => ({ ...prev, password: '', confirm_password: '' })); // Clear password fields
+      setFormData(prev => ({ ...prev, new_password: '', confirm_password: '', otp_code: '' })); // Clear sensitive fields
     } catch (err: unknown) {
       console.error('Reset password error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -128,7 +134,6 @@ export default function ResetPasswordPage() {
         {/* Decorative Elements */}
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-100 blur-3xl" />
 
-
         {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-20 rounded-3xl">
@@ -143,7 +148,7 @@ export default function ResetPasswordPage() {
             Reset Your Password
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter a new password for your account
+            Enter the OTP code and your new password
           </p>
           <p className="mt-2 text-sm text-gray-600">
             Return to{' '}
@@ -214,7 +219,35 @@ export default function ResetPasswordPage() {
 
             <div>
               <label
-                htmlFor="password"
+                htmlFor="otp_code"
+                className="block text-sm font-medium text-gray-700"
+              >
+                OTP Code
+                <span className="sr-only">(required)</span>
+              </label>
+              <div className="relative mt-1">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <FiKey className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="otp_code"
+                  name="otp_code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={formData.otp_code}
+                  onChange={handleChange}
+                  className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
+                  placeholder="Enter 6-digit OTP"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="new_password"
                 className="block text-sm font-medium text-gray-700"
               >
                 New Password
@@ -225,12 +258,12 @@ export default function ResetPasswordPage() {
                   <FiLock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="password"
-                  name="password"
+                  id="new_password"
+                  name="new_password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  value={formData.password}
+                  value={formData.new_password}
                   onChange={handleChange}
                   aria-describedby={error ? 'error-message' : success ? 'success-message' : undefined}
                   className="block w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
