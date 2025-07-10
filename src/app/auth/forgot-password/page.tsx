@@ -51,8 +51,8 @@ export default function ForgotPasswordPage() {
       const response = await AuthService.forgotPassword(formData.email);
       setSuccess('An OTP has been sent to your email. Please check your inbox.');
       setIsSubmitted(true);
-      console.log('Redirecting to verify OTP page');
-      router.replace(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}`);
+      console.log('Redirecting to reset password page');
+      router.push(`/auth/reset-password?email=${encodeURIComponent(formData.email)}`);
     } catch (err: unknown) {
       console.error('Forgot password error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -79,9 +79,10 @@ export default function ForgotPasswordPage() {
 
     try {
       console.log('Attempting to resend OTP for:', formData.email);
-      const response = await AuthService.forgotPassword(formData.email); // Reuse forgotPassword for resend
+      const response = await AuthService.forgotPassword(formData.email);
       console.log('Resend OTP response:', response);
       setResendSuccess('OTP resent successfully');
+      router.push(`/auth/reset-password?email=${encodeURIComponent(formData.email)}`);
     } catch (err: unknown) {
       const error = err as { response?: { status: number; data: any; headers: any } };
       console.error('Resend OTP error details:', {
@@ -98,7 +99,7 @@ export default function ForgotPasswordPage() {
       setResendLoading(false);
       console.log('Resend OTP process completed');
     }
-  }, [formData.email]);
+  }, [formData.email, router]);
 
   // Clear success or resendSuccess message after 5 seconds
   useEffect(() => {
@@ -129,14 +130,10 @@ export default function ForgotPasswordPage() {
         </motion.div>
       </Link>
 
-      {/* Animated Background */}
-
-
       <div className="w-full max-w-md space-y-8 bg-white rounded-3xl shadow-lg p-8 relative overflow-hidden z-10">
         {/* Decorative Elements */}
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-100 blur-3xl" />
   
-
         <div className="text-center relative z-20">
           <FiMail className="mx-auto h-12 w-12 text-blue-600" />
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700">
@@ -252,13 +249,13 @@ export default function ForgotPasswordPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push(`/auth/verify-otp?email=${encodeURIComponent(formData.email)}`)}
+                  onClick={() => router.push(`/auth/reset-password?email=${encodeURIComponent(formData.email)}`)}
                   disabled={loading || resendLoading}
                   className={`flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ${
                     (loading || resendLoading) ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-md'
                   }`}
                 >
-                  Verify OTP <FiArrowRight className="ml-1" />
+                  Continue <FiArrowRight className="ml-1" />
                 </button>
               </div>
             )}

@@ -150,20 +150,23 @@ export class AuthService {
   }
 
   static async logout() {
-    try {
-      const refreshToken = this.getRefreshToken();
-      if (refreshToken) {
-        await api.post('/auth/signout', {}, {
+  try {
+    const refreshToken = this.getRefreshToken();
+    if (refreshToken) {
+      await api.post('/auth/signout/', 
+        { refresh: refreshToken }, // Send refresh token in the body
+        {
           headers: { 'Authorization': `Bearer ${this.getAccessToken()}` },
           withCredentials: true,
-        });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      this.clearTokens();
+        }
+      );
     }
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    this.clearTokens();
   }
+}
 
   static getGoogleAuthUrl(): string {
     return `${process.env.NEXT_PUBLIC_API_URL}/auth/google?redirect_uri=${encodeURIComponent(
@@ -240,30 +243,41 @@ export class AuthService {
     }
   }
 
-  static async resetPassword(data: { email: string; password: string; confirm_password: string; token?: string }): Promise<{ message: string }> {
-    try {
-      const response = await api.post('/auth/reset-password/', data);
-      return { message: response.data.message || 'Password reset successfully.' };
-    } catch (error: any) {
-      if (error.response) {
-        const { status, data } = error.response;
-        if (status === 400) {
-          if (data?.error.includes('password')) {
-            throw new Error('Password does not meet requirements. Must be at least 8 characters.');
-          } else if (data?.error.includes('confirm_password')) {
-            throw new Error('Passwords do not match.');
-          } else if (data?.error.includes('token')) {
-            throw new Error('Invalid or expired reset token. Please request a new OTP.');
-          } else {
-            throw new Error(data.error || 'Unable to reset password. Please try again.');
-          }
-        } else if (status === 404) {
-          throw new Error('No account found with this email address.');
+  static async resetPassword(data: { 
+  email: string; 
+  otp_code: string; 
+  new_password: string; 
+  confirm_password: string 
+}): Promise<{ message: string }> {
+  try {
+    const response = await api.post('/auth/password-reset/confirm/', {
+      email: data.email,
+      otp_code: data.otp_code,
+      new_password: data.new_password,
+      confirm_password: data.confirm_password
+    });
+    return { message: response.data.message || 'Password reset successfully.' };
+  } catch (error: any) {
+    if (error.response) {
+      const { status, data } = error.response;
+      if (status === 400) {
+        if (data?.error.includes('password')) {
+          throw new Error('Password does not meet requirements. Must be at least 8 characters.');
+        } else if (data?.error.includes('confirm_password')) {
+          throw new Error('Passwords do not match.');
+        } else if (data?.error.includes('otp_code')) {
+          throw new Error('Invalid or expired OTP code. Please request a new one.');
         } else {
-          throw new Error('Unable to reset password. Please try again later.');
+          throw new Error(data.error || 'Unable to reset password. Please try again.');
         }
+      } else if (status === 404) {
+        throw new Error('No account found with this email address.');
+      } else {
+        throw new Error('Unable to reset password. Please try again later.');
       }
-      throw new Error('Network error. Please check your connection and try again.');
     }
+    throw new Error('Network error. Please check your connection and try again.');
   }
+}
+
 }
