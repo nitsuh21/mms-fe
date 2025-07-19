@@ -1,33 +1,30 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/outline';
 
-export interface AddMemberFormData {
-  business: number;
-  first_name: string;
-  last_name: string;
-  customer_id?: string;
+export interface BusinessFormData {
+  name: string;
   email: string;
   phone: string;
+  address: string;
+  website: string;
   is_active: boolean;
 }
 
-interface AddMemberFormProps {
-  businessId: number;
+interface AddBusinessFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: AddMemberFormData) => void;
+  onSubmit: (data: BusinessFormData) => void;
 }
 
-export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }: AddMemberFormProps) {
-  const [formData, setFormData] = useState<AddMemberFormData>({
-    business: businessId,
-    first_name: '',
-    last_name: '',
-    customer_id: '',
+export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusinessFormProps) {
+  const [formData, setFormData] = useState<BusinessFormData>({
+    name: '',
     email: '',
     phone: '',
+    address: '',
+    website: '',
     is_active: true
   });
 
@@ -82,29 +79,44 @@ export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }:
           <div className="px-8 py-6">
             <div className="flex items-start">
               <div className="flex-shrink-0 flex items-center justify-center h-14 w-14 rounded-full bg-brand-100 dark:bg-brand-900/50">
-                <UserPlusIcon className="h-7 w-7 text-brand-600 dark:text-brand-300" />
+                <BuildingStorefrontIcon className="h-7 w-7 text-brand-600 dark:text-brand-300" />
               </div>
               <div className="ml-4">
                 <h3 className="text-xl font-semibold leading-6 text-gray-900 dark:text-white">
-                  Add New Member
+                  Add New Business
                 </h3>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Fill in the details below to add a new member
+                  Fill in the details below to add a new business
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Business Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
+                  required
+                />
+              </div>
+
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    First Name <span className="text-red-500">*</span>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
-                    id="first_name"
-                    name="first_name"
-                    value={formData.first_name}
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
                     required
@@ -112,14 +124,14 @@ export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }:
                 </div>
                 
                 <div>
-                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Last Name <span className="text-red-500">*</span>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Phone <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
-                    id="last_name"
-                    name="last_name"
-                    value={formData.last_name}
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleChange}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
                     required
@@ -128,49 +140,31 @@ export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }:
               </div>
               
               <div>
-                <label htmlFor="customer_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Customer ID <span className="text-blue-500 text-xs">(Optional)</span>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Address <span className="text-blue-500 text-xs">(Optional)</span>
                 </label>
                 <input
                   type="text"
-                  id="customer_id"
-                  name="customer_id"
-                  value={formData.customer_id}
+                  id="address"
+                  name="address"
+                  value={formData.address}
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                  placeholder="Leave blank if not applicable"
                 />
               </div>
               
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email <span className="text-red-500">*</span>
+                <label htmlFor="website" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Website <span className="text-blue-500 text-xs">(Optional)</span>
                 </label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
+                  type="url"
+                  id="website"
+                  name="website"
+                  value={formData.website}
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Phone <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                  required
-                  pattern="[0-9+\-\s]+"
-                  title="Please enter a valid phone number"
+                  placeholder="https://example.com"
                 />
               </div>
               
@@ -184,7 +178,7 @@ export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }:
                   className="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                 />
                 <label htmlFor="is_active" className="ml-3 block text-sm text-gray-700 dark:text-gray-300">
-                  Active Member
+                  Active Business
                 </label>
               </div>
               
@@ -200,7 +194,7 @@ export default function AddMemberForm({ businessId, isOpen, onClose, onSubmit }:
                   type="submit"
                   className="inline-flex justify-center rounded-md border border-transparent bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-400 transition-colors duration-200"
                 >
-                  Add Member
+                  Add Business
                 </button>
               </div>
             </form>
