@@ -33,6 +33,7 @@ export interface AddDiscountParams {
   scope: 'A' | 'S';
   specific_plans?: string[];
   max_uses: string;
+  is_active: boolean;
 }
 
 export interface UpdateDiscountParams {
@@ -48,6 +49,7 @@ export interface UpdateDiscountParams {
   specific_plans?: string[];
   max_uses?: string;
   business: string; // Required field
+  is_active?: boolean;
 }
 
 export const discountsService = {
