@@ -12,7 +12,11 @@ export interface Customer {
   created_at: string;
   updated_at: string;
 }
-
+interface ToggleActiveStatusParams {
+  customerId: number;
+  businessId: number;
+  isActive: boolean;
+}
 import { MembershipRequest } from '@/types/membership';
 
 export interface CreateCustomerData {
@@ -157,7 +161,7 @@ export class CustomerService {
   // Update a customer
   async updateCustomer(customerId: number, data: UpdateCustomerData): Promise<Customer> {
     try {
-      const response = await api.put(`/subscriptions/customers/${customerId}/`, data);
+      const response = await api.patch(`/subscriptions/customers/${customerId}/`, data);
       return response.data;
     } catch (error: any) {
       console.error('Error updating customer:', error);
@@ -167,6 +171,27 @@ export class CustomerService {
       throw error;
     }
   }
+
+
+  async toggleActiveStatus({ 
+  customerId, 
+  businessId, 
+  isActive 
+}: ToggleActiveStatusParams): Promise<Customer> {
+  try {
+    const response = await api.patch(`/subscriptions/customers/${customerId}/`, {
+      business: businessId,
+      is_active: isActive
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error ${isActive ? 'activating' : 'deactivating'} customer:`, error);
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw error;
+  }
+}
 
   // Delete a customer
   async deleteCustomer(memberId: number): Promise<void> {

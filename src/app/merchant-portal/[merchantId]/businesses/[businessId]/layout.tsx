@@ -9,7 +9,7 @@ export default function BusinessLayout({
   children: React.ReactNode;
 }) {
   const params = useParams();
-  const businessId = params.businessId as string;
+  const businessId = params?.businessId as string | undefined;
   
   // Get the actual business ID from the URL-friendly name
   // This is a temporary solution until we implement business IDs in the backend
@@ -24,7 +24,7 @@ export default function BusinessLayout({
     return businessMap[urlFriendlyName] || urlFriendlyName;
   };
   
-  const actualBusinessId = getActualBusinessId(businessId);
+  const actualBusinessId = businessId ? getActualBusinessId(businessId) : undefined;
 
   return (
     <AuthProvider role="business_admin" businessId={actualBusinessId}>

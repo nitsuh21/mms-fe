@@ -1,13 +1,13 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import { FiPlus, FiEye, FiEdit2, FiTrash2 } from "react-icons/fi";
-import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
+import { FiPlus, FiEdit2 } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 import { Business } from "@/types/business";
-import { FiExternalLink } from "react-icons/fi";
+import AddBusinessForm from "@/components/form/AddBusinessForm";
+import BusinessesTable from "@/components/tables/BusinessesTable";
+import BusinessesCards from "@/components/cards/BusinessesCards";
 
 interface PaginatedResponse {
   count: number;
@@ -21,10 +21,10 @@ export default function PlatformBusinessesPage() {
   const merchantId = params?.merchantId as string;
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const fetchBusinesses = async () => {
@@ -43,19 +43,42 @@ export default function PlatformBusinessesPage() {
     fetchBusinesses();
   }, []);
 
-  const handleDelete = async () => {
-    if (!selectedBusiness) return;
-    setIsDeleting(true);
-
+  const handleDelete = async (businessId: string) => {
+    setIsProcessing(true);
     try {
-      await api.delete(`/businesses/businesses/${selectedBusiness.id}/`);
-      setBusinesses(businesses.filter(b => b.id !== selectedBusiness.id));
-      setIsDeleteModalOpen(false);
+      await api.delete(`/businesses/businesses/${businessId}/`);
+      setBusinesses(businesses.filter(b => b.id !== businessId));
     } catch (err) {
       console.error('Error deleting business:', err);
+      throw err; // Let the table component handle the error
     } finally {
-      setIsDeleting(false);
-      setSelectedBusiness(null);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleToggleStatus = async (businessId: string, isActive: boolean) => {
+    setIsProcessing(true);
+    try {
+      await api.patch(`/businesses/businesses/${businessId}/`, { is_active: isActive });
+      setBusinesses(businesses.map(b => 
+        b.id === businessId ? { ...b, is_active: isActive } : b
+      ));
+    } catch (err) {
+      console.error('Error updating business status:', err);
+      throw err; // Let the table component handle the error
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddBusiness = async (formData: any) => {
+    try {
+      const response = await api.post('/businesses/businesses/', formData);
+      setBusinesses([...businesses, response.data]);
+      setIsAddFormOpen(false);
+    } catch (err) {
+      console.error('Error adding business:', err);
+      throw err; // Let the form component handle the error
     }
   };
 
@@ -98,183 +121,35 @@ export default function PlatformBusinessesPage() {
           </p>
         </div>
 
-        <Link
-          href={`/merchant-portal/${merchantId}/platform/businesses/new`}
+        <button
+          onClick={() => setIsAddFormOpen(true)}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
         >
           <FiPlus className="h-4 w-4" />
           Add Business
-        </Link>
+        </button>
       </div>
 
-      {/* Desktop view - table */}
-      <div className="hidden md:block rounded-lg border border-gray-200 bg-white shadow-default dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
-        <div className="grid grid-cols-12 border-b border-gray-200 py-4 px-6 dark:border-gray-700">
-          <div className="col-span-3">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Business Name</h5>
-          </div>
-          {/* <div className="col-span-2">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Owner</h5>
-          </div> */}
-          <div className="col-span-2">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Address</h5>
-          </div>
-          <div className="col-span-1">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</h5>
-          </div>
-          <div className="col-span-2">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Members</h5>
-          </div>
-          <div className="col-span-2">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Website</h5>
-          </div>
-          <div className="col-span-2 text-right">
-            <h5 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</h5>
-          </div>
-        </div>
-
-        {businesses.map((business) => (
-          <div
-            key={business.id}
-            className="grid grid-cols-12 border-b border-gray-200 py-4 px-6 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-          >
-            <div className="col-span-3">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">{business.name}</h3>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{business.email}</p>
-            </div>
-            {/* <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">N/A</p>
-            </div> */}
-            <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{business.address || 'N/A'}</p>
-            </div>
-          <div className="col-span-1">
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  business.is_active
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-              >
-                {business.is_active ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-            <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">0 members</p>
-            </div>
-            <div className="col-span-2">
-            <div className="flex items-center gap-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                {business.website || 'N/A'}
-              </p>
-              {business.website && (
-                <a
-                  href={business.website.startsWith('http') ? business.website : `https://${business.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-blue-500"
-                  title="Visit website"
-                >
-                  <FiExternalLink className="w-4 h-4" />
-                </a>
-              )}
-            </div>
-          </div>
-            <div className="col-span-2 text-right">
-              <div className="flex items-center justify-end space-x-2">
-                <Link
-                  href={`/merchant-portal/${merchantId}/businesses/${business.id}/dashboard`}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                  title="View details"
-                >
-                  <FiEye className="h-4 w-4" />
-                </Link>
-                <Link
-                  href={`/merchant-portal/${merchantId}/businesses/${business.id}/settings`}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                  title="Edit"
-                >
-                  <FiEdit2 className="h-4 w-4" />
-                </Link>
-                <button
-                  onClick={() => {
-                    setSelectedBusiness(business);
-                    setIsDeleteModalOpen(true);
-                  }}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                  title="Delete business"
-                >
-                  <FiTrash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="hidden md:block">
+        <BusinessesTable 
+          businesses={businesses} 
+          merchantId={merchantId} 
+          onDelete={handleDelete}
+          onToggleActiveStatus={handleToggleStatus}
+        />
       </div>
 
-      {/* Mobile view - cards */}
-      <div className="md:hidden">
-        {businesses.map((business) => (
-          <div
-            key={business.id}
-            className="rounded-lg border border-gray-200 bg-white shadow-default dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">{business.name}</h3>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${business.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}
-                >
-                  {business.status === 'active' ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{business.contact_email}</p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{business.address}</p>
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400">0 members</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">$0.00</p>
-              </div>
-            </div>
-            <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex items-center justify-end gap-2">
-              <Link
-                href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}`}
-                className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
-              >
-                <FiEye className="h-5 w-5" aria-hidden="true" />
-              </Link>
-              <Link
-                href={`/merchant-portal/${merchantId}/platform/businesses/${business.id}/edit`}
-                className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
-              >
-                <FiEdit2 className="h-5 w-5" aria-hidden="true" />
-              </Link>
-              <button
-                onClick={() => {
-                  setSelectedBusiness(business);
-                  setIsDeleteModalOpen(true);
-                }}
-                className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
-              >
-                <FiTrash2 className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <BusinessesCards 
+        businesses={businesses} 
+        merchantId={merchantId} 
+        onDeleteClick={(business) => handleDelete(business.id)}
+      />
 
-      <DeleteConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedBusiness(null);
-        }}
-        onConfirm={handleDelete}
-        title="Delete Business"
-        message={`Are you sure you want to delete ${selectedBusiness?.name}? This action cannot be undone.`}
-        isDeleting={isDeleting}
+      <AddBusinessForm
+        isOpen={isAddFormOpen}
+        onClose={() => setIsAddFormOpen(false)}
+        onSubmit={handleAddBusiness}
       />
     </div>
   );
 }
-
-

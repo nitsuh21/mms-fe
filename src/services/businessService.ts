@@ -21,11 +21,18 @@ export const businessService = {
   },
 
   // Update a business
-  updateBusiness: async (id: string, data: Partial<Business>): Promise<Business> => {
-    console.log({data});
-    const response = await api.patch(`/businesses/businesses/${id}/`, data);
-    return response.data;
-  },
+ updateBusiness: async (id: string, data: Partial<Business> | FormData): Promise<Business> => {
+  const config = data instanceof FormData 
+    ? {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    : {};
+
+  const response = await api.patch(`/businesses/businesses/${id}/`, data, config);
+  return response.data;
+},
 
   // Delete a business
   deleteBusiness: async (id: string): Promise<void> => {
