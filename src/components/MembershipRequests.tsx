@@ -28,9 +28,8 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
       const response = await customerService.getMembershipRequests(businessId, filters);
       console.log("Membership requests response:", response);
       
-      // Filter to only show pending requests
-      const pendingRequests = response.filter(request => request.status === 'PENDING');
-      setRequests(pendingRequests);
+      // Show all requests (not just pending)
+      setRequests(response);
       
       // Fetch customer details for each request
       if (response && response.length > 0) {
@@ -110,7 +109,7 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
   // Bulk selection handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked && requests) {
-      // Only select pending requests
+      // Only select pending requests for bulk operations
       const pendingIds = requests.filter(request => request.status === 'PENDING').map(request => request.id);
       setSelectedRequests(new Set(pendingIds));
     } else {
@@ -175,7 +174,7 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="px-4 py-5 sm:px-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-            Pending Membership Requests
+            Membership Requests
           </h2>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-700">
@@ -200,7 +199,7 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
 
       <div className="px-4 py-5 sm:px-6">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-          Pending Membership Requests
+          Membership Requests
         </h2>
       </div>
       <div className="border-t border-gray-200 dark:border-gray-700">
@@ -208,10 +207,10 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
-                <TableCheckbox
-                  checked={requests && requests.length > 0 && selectedRequests.size === requests.length}
-                  onChange={handleSelectAll}
-                />
+                                              <TableCheckbox
+                                checked={requests && requests.filter(r => r.status === 'PENDING').length > 0 && selectedRequests.size === requests.filter(r => r.status === 'PENDING').length}
+                                onChange={handleSelectAll}
+                              />
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                 Customer
@@ -237,6 +236,7 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
                   <TableCheckbox
                     checked={selectedRequests.has(request.id)}
                     onChange={(checked) => handleSelectRequest(request.id, checked)}
+                    disabled={request.status !== 'PENDING'}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -271,18 +271,26 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleApproveRequest(request.id)}
-                    className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300 mr-2"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleCancelRequest(request.id)}
-                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    Cancel
-                  </button>
+                  {request.status === 'PENDING' ? (
+                    <>
+                      <button
+                        onClick={() => handleApproveRequest(request.id)}
+                        className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300 mr-2"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleCancelRequest(request.id)}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">
+                      {request.status === 'APPROVED' ? 'Approved' : 'Rejected'}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
