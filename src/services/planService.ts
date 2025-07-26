@@ -150,6 +150,21 @@ export class PlanService {
     }
   }
 
+  // Get plans with trial information
+  static async getPlansWithTrial(businessId: string): Promise<Plan[]> {
+    try {
+      const response = await api.get(`/subscriptions/subscription-plans/?business=${businessId}`);
+      return response.data.results.map((plan: any) => ({
+        ...plan,
+        has_trial: plan.trial_days > 0,
+        trial_days: plan.trial_days || 0
+      }));
+    } catch (error) {
+      console.error('Error fetching plans with trial info:', error);
+      throw error;
+    }
+  }
+
   // Update a plan
   static async updatePlan(planId: number, data: UpdatePlanData): Promise<Plan> {
     try {

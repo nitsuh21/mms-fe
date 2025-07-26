@@ -1,4 +1,5 @@
 import api from './api';
+import { parseDRFError } from '@/utils/errorHandling';
 
 export interface Discount {
   id: string;
@@ -58,9 +59,9 @@ export const discountsService = {
       const response = await api.get('/subscriptions/discounts/');
       const data = response.data;
       return 'results' in data ? data.results : data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching discounts:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
@@ -68,9 +69,9 @@ export const discountsService = {
     try {
       const response = await api.get(`/subscriptions/discounts/${id}/`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching discount ${id}:`, error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
@@ -78,9 +79,9 @@ export const discountsService = {
     try {
       const response = await api.post('/subscriptions/discounts/', data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating discount:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
@@ -88,36 +89,36 @@ export const discountsService = {
     try {
       const response = await api.put(`/subscriptions/discounts/${id}/`, data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error updating discount ${id}:`, error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
   delete: async (id: string): Promise<void> => {
     try {
       await api.delete(`/subscriptions/discounts/${id}/`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error deleting discount ${id}:`, error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
   applyToPlan: async (planId: string, discountId: string): Promise<void> => {
     try {
       await api.post(`/subscriptions/subscription-plans/${planId}/discounts/${discountId}/apply/`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error applying discount ${discountId} to plan ${planId}:`, error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 
   removeFromPlan: async (planId: string, discountId: string): Promise<void> => {
     try {
       await api.post(`/subscriptions/subscription-plans/${planId}/discounts/${discountId}/remove/`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error removing discount ${discountId} from plan ${planId}:`, error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   },
 };

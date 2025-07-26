@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Subscription, subscriptionService } from '@/services/subscriptionService';
+import { SubscriptionStatus } from '@/types/subscription';
 import { useNotification } from '@/context/NotificationContext';
 import { formatDate } from '@/utils/dateUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
-import { FiCalendar, FiClock, FiDollarSign, FiUser } from 'react-icons/fi';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { FiCalendar, FiClock, FiDollarSign, FiUser, FiAlertTriangle } from 'react-icons/fi';
+import SubscriptionStatusBadge from './SubscriptionStatusBadge';
+import SubscriptionActions from './SubscriptionActions';
 
 interface SubscriptionDetailsProps {
   subscription: Subscription;
@@ -65,7 +68,7 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
   const handleCancel = async () => {
     try {
       setLoading(true);
-      await subscriptionService.cancelSubscription(subscription.id);
+      await subscriptionService.cancelSubscription(Number(subscription.id));
       showNotification({
         type: 'success',
         title: 'Success',
@@ -87,7 +90,7 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
   const handleConvertTrial = async () => {
     try {
       setLoading(true);
-      await subscriptionService.convertTrialToActive(subscription.id);
+      await subscriptionService.convertTrial(Number(subscription.id));
       showNotification({
         type: 'success',
         title: 'Success',
@@ -109,7 +112,7 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
   const handleRenew = async () => {
     try {
       setLoading(true);
-      await subscriptionService.reactivateSubscription(subscription.id);
+      await subscriptionService.renewSubscription(Number(subscription.id));
       showNotification({
         type: 'success',
         title: 'Success',
@@ -238,95 +241,104 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
 
       {/* Cancel Dialog */}
       <Dialog
-        isOpen={showCancelDialog}
-        onClose={() => setShowCancelDialog(false)}
-        title="Cancel Subscription"
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
       >
-        <div className="mt-2">
-          <p className="text-gray-500">
-            Are you sure you want to cancel this subscription? This action cannot be
-            undone.
-          </p>
-        </div>
-
-        <div className="mt-4 flex justify-end space-x-2">
-          <Button
-            variant="secondary"
-            onClick={() => setShowCancelDialog(false)}
-            disabled={loading}
-          >
-            No, Keep It
-          </Button>
-          <Button
-            variant="danger"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Yes, Cancel
-          </Button>
-        </div>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Subscription</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-gray-500">
+              Are you sure you want to cancel this subscription? This action cannot be
+              undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowCancelDialog(false)}
+              disabled={loading}
+            >
+              No, Keep It
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Yes, Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Convert Trial Dialog */}
       <Dialog
-        isOpen={showConvertDialog}
-        onClose={() => setShowConvertDialog(false)}
-        title="Convert Trial to Active"
+        open={showConvertDialog}
+        onOpenChange={setShowConvertDialog}
       >
-        <div className="mt-2">
-          <p className="text-gray-500">
-            Are you sure you want to convert this trial to an active subscription?
-            You will be billed for the full subscription amount.
-          </p>
-        </div>
-
-        <div className="mt-4 flex justify-end space-x-2">
-          <Button
-            variant="secondary"
-            onClick={() => setShowConvertDialog(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleConvertTrial}
-            disabled={loading}
-          >
-            Convert to Active
-          </Button>
-        </div>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert Trial to Active</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-gray-500">
+              Are you sure you want to convert this trial to an active subscription?
+              You will be billed for the full subscription amount.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowConvertDialog(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConvertTrial}
+              disabled={loading}
+            >
+              Convert to Active
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Renew Dialog */}
       <Dialog
-        isOpen={showRenewDialog}
-        onClose={() => setShowRenewDialog(false)}
-        title="Renew Subscription"
+        open={showRenewDialog}
+        onOpenChange={setShowRenewDialog}
       >
-        <div className="mt-2">
-          <p className="text-gray-500">
-            Are you sure you want to renew this subscription? You will be billed
-            for the subscription amount.
-          </p>
-        </div>
-
-        <div className="mt-4 flex justify-end space-x-2">
-          <Button
-            variant="secondary"
-            onClick={() => setShowRenewDialog(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleRenew}
-            disabled={loading}
-          >
-            Renew Subscription
-          </Button>
-        </div>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renew Subscription</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-gray-500">
+              Are you sure you want to renew this subscription? You will be billed
+              for the subscription amount.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowRenewDialog(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleRenew}
+              disabled={loading}
+            >
+              Renew Subscription
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );

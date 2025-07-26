@@ -1,4 +1,5 @@
 import api from "./api";
+import { parseDRFError } from '@/utils/errorHandling';
 
 export interface Customer {
   customer_id: string;
@@ -55,10 +56,7 @@ export class CustomerService {
       return response.data?.results || [];
     } catch (error: any) {
       console.error('Error fetching customers:', error);
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.message || error.response.data.error);
-      }
-      throw new Error('Failed to fetch customers. Please try again.');
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -69,10 +67,7 @@ export class CustomerService {
       return response.data;
     } catch (error: any) {
       console.error('Error fetching customer:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -86,10 +81,7 @@ export class CustomerService {
       return transformMembershipRequest(response.data);
     } catch (error: any) {
       console.error('Error creating membership request:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw new Error('Failed to create membership request. Please try again.');
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -102,10 +94,7 @@ export class CustomerService {
       return response.data.map(transformMembershipRequest);
     } catch (error: any) {
       console.error('Error getting membership requests:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -114,9 +103,9 @@ export class CustomerService {
     try {
       const response = await api.get(`/subscriptions/membership-requests/${requestId}/`);
       return transformMembershipRequest(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching membership request details:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -142,19 +131,7 @@ export class CustomerService {
       };
     } catch (error: any) {
       console.error('Error creating customer:', error);
-      if (error.response?.data?.details?.non_field_errors) {
-        throw new Error(error.response.data.details.non_field_errors.join('\n'));
-      } else if (error.response?.data?.error) {
-        // Handle structured error response
-        const errorData = error.response.data;
-        const errorMessage = errorData.message || 
-          (errorData.details ? Object.values(errorData.details).flat().join('\n') : errorData.error);
-        throw new Error(errorMessage);
-      } else if (error.response?.data?.detail) {
-        // Handle DRF default error format
-        throw new Error(error.response.data.detail);
-      }
-      throw new Error('Failed to create member. Please try again.');
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -165,10 +142,7 @@ export class CustomerService {
       return response.data;
     } catch (error: any) {
       console.error('Error updating customer:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -186,10 +160,7 @@ export class CustomerService {
     return response.data;
   } catch (error: any) {
     console.error(`Error ${isActive ? 'activating' : 'deactivating'} customer:`, error);
-    if (error.response?.data?.detail) {
-      throw new Error(error.response.data.detail);
-    }
-    throw error;
+    throw new Error(parseDRFError(error));
   }
 }
 
@@ -199,10 +170,7 @@ export class CustomerService {
       await api.delete(`/subscriptions/customers/${memberId}/`);
     } catch (error: any) {
       console.error('Error deleting customer:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -212,10 +180,7 @@ export class CustomerService {
       await api.post(`/subscriptions/businesses/${businessId}/membership-requests/${requestId}/approve/`);
     } catch (error: any) {
       console.error('Error approving membership request:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -225,10 +190,7 @@ export class CustomerService {
       await api.post(`/subscriptions/businesses/${businessId}/membership-requests/${requestId}/reject/`);
     } catch (error: any) {
       console.error('Error rejecting membership request:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -238,10 +200,7 @@ export class CustomerService {
       await api.delete(`/subscriptions/membership-requests/${requestId}/`);
     } catch (error: any) {
       console.error('Error canceling membership request:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -256,9 +215,9 @@ export class CustomerService {
         params: filters
       });
       return response.data.map(transformMembershipRequest);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching membership requests:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -267,9 +226,9 @@ export class CustomerService {
     try {
       const response = await api.get(`/subscriptions/customers/${customerId}/membership-status/`);
       return response.data.status;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching membership status:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 
@@ -278,9 +237,9 @@ export class CustomerService {
     try {
       const response = await api.post(`/subscriptions/businesses/${businessId}/sync-requests/${requestId}/approve/`);
       return transformMembershipRequest(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving membership request:', error);
-      throw error;
+      throw new Error(parseDRFError(error));
     }
   }
 }

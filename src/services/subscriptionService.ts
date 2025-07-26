@@ -1,5 +1,6 @@
 import api from "./api";
 import { Invoice } from '@/types/invoice';
+import { SubscriptionStatus } from '@/types/subscription';
 import { createErrorHandler } from '@/utils/errorHandling';
 
 // Create error handler for subscription service
@@ -162,25 +163,94 @@ export class SubscriptionService {
   }
 
   // Cancel a subscription
-  async cancelSubscription(subscriptionId: number, endDate?: string): Promise<void> {
+  async cancelSubscription(subscriptionId: number, reason?: string): Promise<Subscription> {
     if (!subscriptionId) {
       throw new Error('Subscription ID is required');
     }
 
-    if (endDate) {
-      const date = new Date(endDate);
-      if (isNaN(date.getTime())) {
-        throw new Error('Invalid end date format');
-      }
-      if (date < new Date()) {
-        throw new Error('End date cannot be in the past');
-      }
+    try {
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`, { 
+        reason: reason || 'Cancelled by user' 
+      });
+      return response.data;
+    } catch (error: unknown) {
+      return handleError(error, 'cancel subscription');
+    }
+  }
+
+  // Convert trial to paid subscription
+  async convertTrial(subscriptionId: number): Promise<Subscription> {
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
     }
 
     try {
-      await api.post(`/subscriptions/subscriptions/${subscriptionId}/cancel/`, { end_date: endDate });
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/convert-trial/`);
+      return response.data;
     } catch (error: unknown) {
-      return handleError(error, 'cancel subscription');
+      return handleError(error, 'convert trial subscription');
+    }
+  }
+
+  // Get subscription status
+  async getSubscriptionStatus(subscriptionId: number): Promise<SubscriptionStatus> {
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
+    }
+
+    try {
+      const response = await api.get(`/subscriptions/subscriptions/${subscriptionId}/status/`);
+      return response.data;
+    } catch (error: unknown) {
+      return handleError(error, 'get subscription status');
+    }
+  }
+
+  // Upgrade subscription
+  async upgradeSubscription(subscriptionId: number, newPlanId: number, effectiveDate?: string): Promise<Subscription> {
+    if (!subscriptionId || !newPlanId) {
+      throw new Error('Subscription ID and new plan ID are required');
+    }
+
+    try {
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/upgrade/`, {
+        new_plan_id: newPlanId,
+        effective_date: effectiveDate
+      });
+      return response.data;
+    } catch (error: unknown) {
+      return handleError(error, 'upgrade subscription');
+    }
+  }
+
+  // Downgrade subscription
+  async downgradeSubscription(subscriptionId: number, newPlanId: number, effectiveDate?: string): Promise<Subscription> {
+    if (!subscriptionId || !newPlanId) {
+      throw new Error('Subscription ID and new plan ID are required');
+    }
+
+    try {
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/downgrade/`, {
+        new_plan_id: newPlanId,
+        effective_date: effectiveDate
+      });
+      return response.data;
+    } catch (error: unknown) {
+      return handleError(error, 'downgrade subscription');
+    }
+  }
+
+  // Renew subscription
+  async renewSubscription(subscriptionId: number): Promise<Subscription> {
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
+    }
+
+    try {
+      const response = await api.post(`/subscriptions/subscriptions/${subscriptionId}/renew/`);
+      return response.data;
+    } catch (error: unknown) {
+      return handleError(error, 'renew subscription');
     }
   }
 
