@@ -4,11 +4,11 @@ import { User } from './user';
 
 export interface MembershipRequest {
   id: number;
-  business: Business;
+  business: Business | number;
   business_name: string;
   user: User | null;
   user_email: string | null;
-  customer: Customer;
+  customer: Customer | number;
   customer_email: string;
   type: 'MEMBER' | 'SYNC';
   status: 'PENDING' | 'APPROVED' | 'REJECTED';

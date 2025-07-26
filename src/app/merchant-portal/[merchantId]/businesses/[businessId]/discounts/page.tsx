@@ -7,6 +7,8 @@ import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { discountsService } from '@/services/discounts';
 import { useForm } from 'react-hook-form';
 import { DatePicker } from '@/components/ui/DatePicker';
+import BulkActions from '@/components/common/BulkActions';
+import TableCheckbox from '@/components/common/TableCheckbox';
 
 interface Discount {
   id: string;
@@ -68,6 +70,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [selectedDiscounts, setSelectedDiscounts] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const { addNotification } = useNotification();
 
   // Ensure client-side rendering
@@ -213,25 +217,77 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this discount?')) {
-      try {
-        await discountsService.delete(id);
-        setDiscounts(prev => (prev?.filter(d => d.id !== id) || []) as Discount[]);
-        addNotification({
-          type: 'success',
-          title: 'Success',
-          message: 'Discount deleted successfully',
-        });
-      } catch (error) {
-        console.error('Error deleting discount:', error);
-        addNotification({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to delete discount',
-        });
-      }
+  const handleDelete = async (discountId: string) => {
+    if (!confirm('Are you sure you want to delete this discount?')) {
+      return;
     }
+
+    try {
+      await discountsService.delete(discountId);
+      setDiscounts(prev => prev.filter(d => d.id !== discountId));
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Discount deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting discount:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete discount',
+      });
+    }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = discounts.map(discount => discount.id);
+      setSelectedDiscounts(new Set(allIds));
+    } else {
+      setSelectedDiscounts(new Set());
+    }
+  };
+
+  const handleSelectDiscount = (discountId: string, checked: boolean) => {
+    const newSelected = new Set(selectedDiscounts);
+    if (checked) {
+      newSelected.add(discountId);
+    } else {
+      newSelected.delete(discountId);
+    }
+    setSelectedDiscounts(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const selectedCount = selectedDiscounts.size;
+      for (const discountId of selectedDiscounts) {
+        await discountsService.delete(discountId);
+      }
+      setDiscounts(prev => prev.filter(d => !selectedDiscounts.has(d.id)));
+      setSelectedDiscounts(new Set());
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: `${selectedCount} discounts deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete some discounts',
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedDiscounts(new Set());
   };
 
   const loadDiscounts = useCallback(async () => {
@@ -298,6 +354,17 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
   };
 
   const columns = [
+    {
+      header: '',
+      accessorKey: 'select',
+      cell: ({ row }: { row: { original: Discount } }) => (
+        <TableCheckbox
+          checked={selectedDiscounts.has(row.original.id)}
+          onChange={(checked) => handleSelectDiscount(row.original.id, checked)}
+        />
+      ),
+      size: 50,
+    },
     {
       header: 'ID',
       accessorKey: 'id',
@@ -877,13 +944,29 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
         <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
           Discounts List
         </h2>
+        
+        <BulkActions
+          selectedItems={Array.from(selectedDiscounts)}
+          onDeleteSelected={handleBulkDelete}
+          onClearSelection={handleClearSelection}
+          itemName="discounts"
+          isLoading={isBulkDeleting}
+        />
+        
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 {columns.map((column) => (
                   <th key={column.header} className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    {column.header}
+                    {column.header === '' ? (
+                      <TableCheckbox
+                        checked={discounts.length > 0 && selectedDiscounts.size === discounts.length}
+                        onChange={handleSelectAll}
+                      />
+                    ) : (
+                      column.header
+                    )}
                   </th>
                 ))}
               </tr>

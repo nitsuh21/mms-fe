@@ -5,6 +5,8 @@ import { useState, useMemo } from 'react';
 import { ArrowUpIcon, ArrowDownIcon, ArrowsUpDownIcon, MagnifyingGlassIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import Alert from '@/components/common/Alert';
 import UpdateMemberForm from '@/components/form/UpdateMemberForm';
+import BulkActions from '@/components/common/BulkActions';
+import TableCheckbox from '@/components/common/TableCheckbox';
 
 interface MembersTableProps {
   members: Customer[];
@@ -36,6 +38,10 @@ export default function MembersTable({
   const [showStatusAlert, setShowStatusAlert] = useState(false);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Customer | null>(null);
+  
+  // Bulk selection states
+  const [selectedMembers, setSelectedMembers] = useState<Set<number>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const sortedMembers = useMemo(() => {
     const sortableMembers = [...members];
@@ -131,13 +137,68 @@ export default function MembersTable({
     }
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredMembers.map(member => member.id);
+      setSelectedMembers(new Set(allIds));
+    } else {
+      setSelectedMembers(new Set());
+    }
+  };
+
+  const handleSelectMember = (memberId: number, checked: boolean) => {
+    const newSelected = new Set(selectedMembers);
+    if (checked) {
+      newSelected.add(memberId);
+    } else {
+      newSelected.delete(memberId);
+    }
+    setSelectedMembers(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      // Delete all selected members
+      for (const memberId of selectedMembers) {
+        await onDeleteMember(memberId);
+      }
+      setSelectedMembers(new Set());
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedMembers(new Set());
+  };
+
   return (
     <>
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedItems={Array.from(selectedMembers).map(id => id.toString())}
+        onDeleteSelected={handleBulkDelete}
+        onClearSelection={handleClearSelection}
+        itemName="members"
+        isLoading={isBulkDeleting}
+      />
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
+                  <TableCheckbox
+                    checked={filteredMembers.length > 0 && selectedMembers.size === filteredMembers.length}
+                    onChange={handleSelectAll}
+                    className="ml-2"
+                  />
+                </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   onClick={() => requestSort('customer_id')}
@@ -197,6 +258,12 @@ export default function MembersTable({
                       key={key} 
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     >
+                      <td className="px-4 py-4">
+                        <TableCheckbox
+                          checked={selectedMembers.has(member.id)}
+                          onChange={(checked) => handleSelectMember(member.id, checked)}
+                        />
+                      </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-300">

@@ -31,8 +31,8 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
     switch (status) {
       case 'AC':
         return 'bg-green-100 text-green-800';
-      case 'PE':
-        return 'bg-blue-100 text-blue-800';
+          case 'PN':
+      return 'bg-blue-100 text-blue-800';
       case 'PD':
         return 'bg-yellow-100 text-red-800';
       case 'CN':
@@ -50,8 +50,8 @@ export const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({
     switch (status) {
       case 'AC':
         return 'Active';
-      case 'PE':
-        return 'Pending';
+          case 'PN':
+      return 'Pending';
       case 'PD':
         return 'Past Due';
       case 'CN':

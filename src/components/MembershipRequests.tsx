@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useNotification } from '@/context/NotificationContext';
-import { MembershipRequest, MembershipRequestFilter } from '@/services/customerService';
-import { customerService } from '@/services/customerService';
+import { MembershipRequest } from '@/types/membership';
+import { customerService, Customer } from '@/services/customerService';
+import BulkActions from '@/components/common/BulkActions';
+import TableCheckbox from '@/components/common/TableCheckbox';
 
 interface MembershipRequestsProps {
   businessId: string;
@@ -11,18 +13,48 @@ interface MembershipRequestsProps {
 
 export default function MembershipRequests({ businessId }: MembershipRequestsProps) {
   const [requests, setRequests] = useState<MembershipRequest[] | null>(null);
+  const [customerDetails, setCustomerDetails] = useState<Record<number, Customer>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedRequests, setSelectedRequests] = useState<Set<number>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const { addNotification } = useNotification();
 
   const loadRequests = async () => {
     try {
-      const filters: MembershipRequestFilter = {
+      const filters = {
         // type: 'SYNC',
         // status: 'PENDING'
       };
       const response = await customerService.getMembershipRequests(businessId, filters);
-      console.log("here is response", response)
-      setRequests(response);
+      console.log("Membership requests response:", response);
+      
+      // Filter to only show pending requests
+      const pendingRequests = response.filter(request => request.status === 'PENDING');
+      setRequests(pendingRequests);
+      
+      // Fetch customer details for each request
+      if (response && response.length > 0) {
+        const customerIds = response
+          .map(request => request.customer)
+          .filter(customerId => typeof customerId === 'number');
+        
+        const customerDetailsMap: Record<number, Customer> = {};
+        
+        // Fetch customer details for each unique customer ID
+        for (const customerId of customerIds) {
+          if (typeof customerId === 'number' && !customerDetailsMap[customerId]) {
+            try {
+              const customer = await customerService.getCustomer(customerId);
+              customerDetailsMap[customerId] = customer;
+            } catch (error) {
+              console.error(`Failed to fetch customer ${customerId}:`, error);
+            }
+          }
+        }
+        
+        setCustomerDetails(customerDetailsMap);
+      }
+      
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to load membership requests:", error);
@@ -55,12 +87,10 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
   };
 
   const handleCancelRequest = async (requestId: number) => {
-    if (!confirm('Are you sure you want to cancel this membership request?')) {
-      return;
-    }
-
+    console.log(`DEBUG: Canceling request ${requestId}`);
     try {
       await customerService.cancelMembershipRequest(requestId);
+      console.log(`DEBUG: Request ${requestId} canceled successfully`);
       loadRequests(); // Refresh requests list
       addNotification({
         type: 'success',
@@ -75,6 +105,57 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
         message: 'Failed to cancel request. Please try again.',
       });
     }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && requests) {
+      // Only select pending requests
+      const pendingIds = requests.filter(request => request.status === 'PENDING').map(request => request.id);
+      setSelectedRequests(new Set(pendingIds));
+    } else {
+      setSelectedRequests(new Set());
+    }
+  };
+
+  const handleSelectRequest = (requestId: number, checked: boolean) => {
+    const newSelected = new Set(selectedRequests);
+    if (checked) {
+      newSelected.add(requestId);
+    } else {
+      newSelected.delete(requestId);
+    }
+    setSelectedRequests(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      // Cancel all selected requests
+      for (const requestId of selectedRequests) {
+        await customerService.cancelMembershipRequest(requestId);
+      }
+      setSelectedRequests(new Set());
+      loadRequests(); // Refresh the list
+      addNotification({
+        type: 'success',
+        title: 'Requests Canceled',
+        message: `${selectedRequests.size} membership requests have been successfully canceled.`,
+      });
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to cancel some requests. Please try again.',
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedRequests(new Set());
   };
 
   useEffect(() => {
@@ -108,6 +189,15 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedItems={Array.from(selectedRequests).map(id => id.toString())}
+        onDeleteSelected={handleBulkDelete}
+        onClearSelection={handleClearSelection}
+        itemName="requests"
+        isLoading={isBulkDeleting}
+      />
+
       <div className="px-4 py-5 sm:px-6">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Pending Membership Requests
@@ -117,6 +207,12 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
+                <TableCheckbox
+                  checked={requests && requests.length > 0 && selectedRequests.size === requests.length}
+                  onChange={handleSelectAll}
+                />
+              </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                 Customer
               </th>
@@ -138,19 +234,37 @@ export default function MembershipRequests({ businessId }: MembershipRequestsPro
             {requests.map((request) => (
               <tr key={request.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <TableCheckbox
+                    checked={selectedRequests.has(request.id)}
+                    onChange={(checked) => handleSelectRequest(request.id, checked)}
+                  />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {request.customer.first_name} {request.customer.last_name}
+                    {typeof request.customer === 'number' && customerDetails[request.customer] 
+                      ? `${customerDetails[request.customer].first_name || ''} ${customerDetails[request.customer].last_name || ''}`.trim() || 'N/A'
+                      : 'Loading...'}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{request.customer.email}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {typeof request.customer === 'number' && customerDetails[request.customer]
+                      ? customerDetails[request.customer].email
+                      : request.customer_email || 'N/A'}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{request.customer.phone}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {typeof request.customer === 'number' && customerDetails[request.customer]
+                      ? customerDetails[request.customer].phone
+                      : 'N/A'}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     request.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                    request.status === 'APPROVED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                    request.status === 'REJECTED' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
                   }`}>
                     {request.status}

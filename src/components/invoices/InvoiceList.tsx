@@ -5,6 +5,8 @@ import { useNotification } from '@/context/NotificationContext';
 import { invoiceService } from '@/services/invoiceService';
 import { useState, useEffect } from 'react';
 import { PaymentList } from './PaymentList';
+import BulkActions from '@/components/common/BulkActions';
+import TableCheckbox from '@/components/common/TableCheckbox';
 
 const statusColors = {
   P: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
@@ -24,6 +26,8 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
   const [, setIsLoading] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
   const [invoicePayments, setInvoicePayments] = useState<{ [key: number]: number }>({});
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<number>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     const loadAllPayments = async () => {
@@ -80,11 +84,76 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
     });
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = invoices.map(invoice => invoice.id);
+      setSelectedInvoices(new Set(allIds));
+    } else {
+      setSelectedInvoices(new Set());
+    }
+  };
+
+  const handleSelectInvoice = (invoiceId: number, checked: boolean) => {
+    const newSelected = new Set(selectedInvoices);
+    if (checked) {
+      newSelected.add(invoiceId);
+    } else {
+      newSelected.delete(invoiceId);
+    }
+    setSelectedInvoices(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      // Delete all selected invoices
+      for (const invoiceId of selectedInvoices) {
+        await invoiceService.deleteInvoice(invoiceId);
+      }
+      setSelectedInvoices(new Set());
+      onRefresh();
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: `${selectedInvoices.size} invoices deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete some invoices',
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedInvoices(new Set());
+  };
+
   return (
     <div className="overflow-x-auto">
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedItems={Array.from(selectedInvoices).map(id => id.toString())}
+        onDeleteSelected={handleBulkDelete}
+        onClearSelection={handleClearSelection}
+        itemName="invoices"
+        isLoading={isBulkDeleting}
+      />
+
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <TableCheckbox
+                checked={invoices.length > 0 && selectedInvoices.size === invoices.length}
+                onChange={handleSelectAll}
+              />
+            </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
               Invoice #
             </th>
@@ -112,6 +181,12 @@ export function InvoiceList({ invoices, onRefresh, onOpenPaymentModal }: Invoice
           {invoices.map((invoice) => (
             <React.Fragment key={invoice.id}>
               <tr>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <TableCheckbox
+                    checked={selectedInvoices.has(invoice.id)}
+                    onChange={(checked) => handleSelectInvoice(invoice.id, checked)}
+                  />
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                   #{invoice.id}
                 </td>

@@ -138,7 +138,7 @@ export class CustomerService {
   // Update a customer
   async updateCustomer(customerId: number, data: UpdateCustomerData): Promise<Customer> {
     try {
-      const response = await api.patch(`/subscriptions/customers/${customerId}/`, data);
+      const response = await api.put(`/subscriptions/customers/${customerId}/`, data);
       return response.data;
     } catch (error: any) {
       console.error('Error updating customer:', error);
@@ -196,8 +196,10 @@ export class CustomerService {
 
   // Cancel a membership request
   async cancelMembershipRequest(requestId: number): Promise<void> {
+    console.log(`DEBUG: Service calling cancel endpoint for request ${requestId}`);
     try {
-      await api.delete(`/subscriptions/membership-requests/${requestId}/`);
+      const response = await api.post(`/subscriptions/membership-requests/${requestId}/cancel/`);
+      console.log(`DEBUG: Cancel response:`, response.data);
     } catch (error: any) {
       console.error('Error canceling membership request:', error);
       throw new Error(parseDRFError(error));

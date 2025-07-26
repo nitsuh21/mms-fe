@@ -9,6 +9,8 @@ import { useNotification } from '@/context/NotificationContext';
 import { FiCalendar } from 'react-icons/fi';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import BulkActions from '@/components/common/BulkActions';
+import TableCheckbox from '@/components/common/TableCheckbox';
 
 
 interface Payment {
@@ -19,7 +21,7 @@ interface Payment {
 }
 
 interface EditSubscriptionData {
-  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PE';
+  status?: 'AC' | 'PD' | 'CN' | 'TR' | 'EX' | 'PN';
   plan_id?: number;
   start_date?: string;
   end_date?: string;
@@ -32,7 +34,7 @@ const getStatusLabel = (status: string): string => {
   switch (status) {
     case 'AC':
       return 'Active';
-    case 'PE':
+    case 'PN':
       return 'Pending';
     case 'PD':
       return 'Past Due';
@@ -51,7 +53,7 @@ const getStatusBadgeColor = (status: string): string => {
   switch (status) {
     case 'AC':
       return 'bg-green-100 text-green-800';
-    case 'PE':
+    case 'PN':
       return 'bg-blue-100 text-blue-800';  // Changed to blue to indicate pending review
     case 'PD':
       return 'bg-yellow-100 text-red-800';
@@ -193,6 +195,8 @@ function SubscriptionsContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedSubscriptions, setSelectedSubscriptions] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [formData, setFormData] = useState<SubscriptionFormData>({
     business: Number(params?.businessId),
     plan_id: 0,
@@ -516,6 +520,56 @@ function SubscriptionsContent() {
     });
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredSubscriptions.map(subscription => subscription.id);
+      setSelectedSubscriptions(new Set(allIds));
+    } else {
+      setSelectedSubscriptions(new Set());
+    }
+  };
+
+  const handleSelectSubscription = (subscriptionId: string, checked: boolean) => {
+    const newSelected = new Set(selectedSubscriptions);
+    if (checked) {
+      newSelected.add(subscriptionId);
+    } else {
+      newSelected.delete(subscriptionId);
+    }
+    setSelectedSubscriptions(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const selectedCount = selectedSubscriptions.size;
+      for (const subscriptionId of selectedSubscriptions) {
+        await subscriptionService.cancelSubscription(Number(subscriptionId));
+      }
+      setSubscriptions(prev => prev.filter(s => !selectedSubscriptions.has(s.id)));
+      setSelectedSubscriptions(new Set());
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: `${selectedCount} subscriptions cancelled successfully`,
+      });
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to cancel some subscriptions',
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedSubscriptions(new Set());
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -556,11 +610,25 @@ function SubscriptionsContent() {
 
       {/* Subscriptions Table */}
       <div className="relative -mx-4 sm:mx-0">
+        <BulkActions
+          selectedItems={Array.from(selectedSubscriptions)}
+          onDeleteSelected={handleBulkDelete}
+          onClearSelection={handleClearSelection}
+          itemName="subscriptions"
+          isLoading={isBulkDeleting}
+        />
+        
         <div className="overflow-x-auto min-w-full border-x border-gray-200 dark:border-gray-700 sm:border-0">
           <div className="inline-block min-w-full align-middle">
             <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <TableCheckbox
+                      checked={filteredSubscriptions.length > 0 && selectedSubscriptions.size === filteredSubscriptions.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Customer
                   </th>
@@ -587,6 +655,12 @@ function SubscriptionsContent() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredSubscriptions.map((sub) => (
                   <tr key={sub.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <TableCheckbox
+                        checked={selectedSubscriptions.has(sub.id)}
+                        onChange={(checked) => handleSelectSubscription(sub.id, checked)}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div>
