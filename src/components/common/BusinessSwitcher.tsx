@@ -8,6 +8,12 @@ import type { Business } from "@/types/business";
 import { AuthService } from "@/services/authService";
 import AddBusinessForm from "@/components/form/AddBusinessForm";
 
+interface DaySchedule {
+  open: string;
+  close: string;
+  is_closed: boolean;
+}
+
 export const BusinessSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,6 +23,52 @@ export const BusinessSwitcher = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const { merchantId } = useParams() as { merchantId: string };
   const router = useRouter();
+
+  // Initialize currentBusiness with default values matching Business type
+  const [currentBusiness, setCurrentBusiness] = useState<Business>({
+    id: merchantId,
+    name: "Loading...",
+    location: "",
+    status: "active",
+    contact_email: "",
+    description: "",
+    email: "",
+    phone: "",
+    address: "",
+    timezone: "UTC",
+    currency: "USD",
+    currency_symbol: "$",
+    logo: null,
+    logo_url: null,
+    cover_image: null,
+    cover_image_url: null,
+    business_hours: {},
+    notify_new_members: false,
+    notify_expiring_subscriptions: false,
+    notify_failed_payments: false,
+    email_notifications: false,
+    sms_notifications: false,
+    allow_auto_renew: false,
+    grace_period_days: 0,
+    send_payment_reminders: false,
+    reminder_days_before: 0,
+    allow_partial_payments: false,
+    website: null,
+    instagram: null,
+    facebook: null,
+    twitter: null,
+    tiktok: null,
+    youtube: null,
+    whatsapp: null,
+    telegram: null,
+    category: "",
+    subcategory: "",
+    is_visible_in_search: true,
+    merchant: "",
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
 
   useEffect(() => {
     const fetchBusinesses = async () => {
@@ -37,6 +89,15 @@ export const BusinessSwitcher = () => {
         }));
 
         setBusinesses(businessesWithStringIds);
+
+        // Find and set the current business after loading
+        const foundBusiness = businessesWithStringIds.find(b => b.id === merchantId);
+        if (foundBusiness) {
+          setCurrentBusiness(foundBusiness);
+        } else if (businessesWithStringIds.length > 0) {
+          // Fallback to first business if current not found
+          setCurrentBusiness(businessesWithStringIds[0]);
+        }
       } catch (error: any) {
         console.error("Failed to fetch businesses:", error);
         
@@ -85,6 +146,10 @@ export const BusinessSwitcher = () => {
 
   const handleBusinessSwitch = async (businessId: string) => {
     try {
+      const selectedBusiness = businesses.find(b => b.id === businessId);
+      if (selectedBusiness) {
+        setCurrentBusiness(selectedBusiness);
+      }
       router.push(`/merchant-portal/${merchantId}/businesses/${businessId}/dashboard`);
       setIsOpen(false);
     } catch (error: any) {
@@ -95,30 +160,6 @@ export const BusinessSwitcher = () => {
       }
     }
   };
-
-  const currentBusiness = Array.isArray(businesses)
-    ? businesses.find(b => b.id === merchantId) || {
-        id: merchantId,
-        name: "Select a business",
-        address: "",
-        contact_email: "",
-        owner: "",
-        location: "",
-        status: "active",
-        memberCount: 0,
-        revenue: ""
-      }
-    : {
-        id: merchantId,
-        name: "Select a business",
-        address: "",
-        contact_email: "",
-        owner: "",
-        location: "",
-        status: "active",
-        memberCount: 0,
-        revenue: ""
-      };
 
   return (
     <>
@@ -165,7 +206,11 @@ export const BusinessSwitcher = () => {
                     <button
                       key={business.id}
                       onClick={() => handleBusinessSwitch(business.id)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
+                      className={`flex w-full items-center justify-between px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                        business.id === currentBusiness.id 
+                          ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400' 
+                          : 'text-gray-700 dark:text-gray-200'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-100 font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
@@ -178,7 +223,7 @@ export const BusinessSwitcher = () => {
                           </p>
                         </div>
                       </div>
-                      {business.id === merchantId && (
+                      {business.id === currentBusiness.id && (
                         <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
                           Current
                         </span>

@@ -180,33 +180,7 @@ function DashboardPage() {
     }
   }, [timeFilter, isAuthenticated, authLoading, businessId, showNotification]);
 
-  const handleExport = async (format: 'csv' | 'pdf') => {
-    try {
-      setIsLoading(true);
-      await dashboardService.exportDashboardData(merchantId, businessId, timeFilter, format);
-      showNotification({
-        title: 'Success',
-        message: `Dashboard data exported as ${format.toUpperCase()}`,
-        type: 'success'
-      });
-    } catch (error: any) {
-      showNotification({
-        title: 'Error',
-        message: error.message || `Failed to export dashboard as ${format.toUpperCase()}`,
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (authLoading || isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
+  
 
   return (
     <div className="p-4">
@@ -234,21 +208,8 @@ function DashboardPage() {
               Week
             </button>
           </div>
-          {/* Export Buttons */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => handleExport('csv')}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200"
-            >
-              Export CSV
-            </button>
-            <button
-              onClick={() => handleExport('pdf')}
-              className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              Export PDF
-            </button>
-          </div>
+          
+
         </div>
       </div>
 
