@@ -12,10 +12,19 @@ export interface BusinessFormData {
   is_active: boolean;
 }
 
+interface FormErrors {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  general?: string;
+}
+
 interface AddBusinessFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: BusinessFormData) => void;
+  onSubmit: (data: BusinessFormData) => Promise<any>;
 }
 
 export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusinessFormProps) {
@@ -28,6 +37,8 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
     is_active: true
   });
 
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,14 +57,92 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
     };
   }, [isOpen, onClose]);
 
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Business name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^[\d\s+\-()]{10,20}$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+    
+    if (formData.website && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(formData.website)) {
+      newErrors.website = 'Please enter a valid URL (e.g., https://example.com)';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setErrors(prev => ({ ...prev, general: undefined }));
+    
+    try {
+      const response = await onSubmit(formData);
+      
+      // Only close if there are no errors in the response
+      if (!response?.errors) {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          address: '',
+          website: '',
+          is_active: true
+        });
+        onClose();
+      }
+    } catch (error: any) {
+      // Handle backend validation errors
+      if (error.response?.data) {
+        const backendErrors = error.response.data;
+        const formattedErrors: FormErrors = {};
+        
+        // Handle both array-style and object-style error responses
+        for (const key in backendErrors) {
+          if (Array.isArray(backendErrors[key])) {
+            formattedErrors[key as keyof FormErrors] = backendErrors[key].join(', ');
+          } else if (typeof backendErrors[key] === 'string') {
+            formattedErrors[key as keyof FormErrors] = backendErrors[key];
+          }
+        }
+        
+        setErrors(formattedErrors);
+      } else {
+        setErrors({
+          general: error.message || 'An error occurred while submitting the form'
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -91,6 +180,12 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
               </div>
             </div>
 
+            {errors.general && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md dark:bg-red-900/20 dark:border-red-900">
+                <p className="text-sm text-red-600 dark:text-red-300">{errors.general}</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -102,9 +197,13 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                  required
+                  className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4 ${
+                    errors.name ? 'border-red-500 dark:border-red-500' : ''
+                  }`}
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -118,9 +217,13 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                    required
+                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4 ${
+                      errors.email ? 'border-red-500 dark:border-red-500' : ''
+                    }`}
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -133,9 +236,14 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
-                    required
+                    maxLength={15}
+                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4 ${
+                      errors.phone ? 'border-red-500 dark:border-red-500' : ''
+                    }`}
                   />
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.phone}</p>
+                  )}
                 </div>
               </div>
               
@@ -149,8 +257,13 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
+                  className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4 ${
+                    errors.address ? 'border-red-500 dark:border-red-500' : ''
+                  }`}
                 />
+                {errors.address && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.address}</p>
+                )}
               </div>
               
               <div>
@@ -163,9 +276,14 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4"
+                  className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm py-3 px-4 ${
+                    errors.website ? 'border-red-500 dark:border-red-500' : ''
+                  }`}
                   placeholder="https://example.com"
                 />
+                {errors.website && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.website}</p>
+                )}
               </div>
               
               <div className="flex items-center">
@@ -187,14 +305,16 @@ export default function AddBusinessForm({ isOpen, onClose, onSubmit }: AddBusine
                   type="button"
                   onClick={onClose}
                   className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex justify-center rounded-md border border-transparent bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-400 transition-colors duration-200"
+                  className="inline-flex justify-center rounded-md border border-transparent bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-400 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
                 >
-                  Add Business
+                  {isSubmitting ? 'Submitting...' : 'Add Business'}
                 </button>
               </div>
             </form>

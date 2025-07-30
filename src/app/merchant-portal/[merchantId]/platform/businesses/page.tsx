@@ -8,6 +8,7 @@ import { Business } from "@/types/business";
 import AddBusinessForm from "@/components/form/AddBusinessForm";
 import BusinessesTable from "@/components/tables/BusinessesTable";
 import BusinessesCards from "@/components/cards/BusinessesCards";
+import { businessService } from "@/services/businessService";
 
 interface PaginatedResponse {
   count: number;
@@ -43,38 +44,43 @@ export default function PlatformBusinessesPage() {
     fetchBusinesses();
   }, []);
 
-  const handleDelete = async (businessId: string) => {
+   const handleDelete = async (businessId: string) => {
     setIsProcessing(true);
     try {
-      await api.delete(`/businesses/businesses/${businessId}/`);
+      await businessService.deleteBusiness(businessId);
       setBusinesses(businesses.filter(b => b.id !== businessId));
     } catch (err) {
       console.error('Error deleting business:', err);
-      throw err; // Let the table component handle the error
+      throw err;
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleToggleStatus = async (businessId: string, isActive: boolean) => {
+ const handleToggleStatus = async (businessId: string, isActive: boolean) => {
     setIsProcessing(true);
     try {
-      await api.patch(`/businesses/businesses/${businessId}/`, { is_active: isActive });
+      const updatedBusiness = await businessService.updateBusiness(businessId, { is_active: isActive });
       setBusinesses(businesses.map(b => 
-        b.id === businessId ? { ...b, is_active: isActive } : b
+        b.id === businessId ? updatedBusiness : b
       ));
     } catch (err) {
       console.error('Error updating business status:', err);
-      throw err; // Let the table component handle the error
+      throw err;
     } finally {
       setIsProcessing(false);
     }
   };
-
+  
   const handleAddBusiness = async (formData: any) => {
     try {
-      const response = await api.post('/businesses/businesses/', formData);
-      setBusinesses([...businesses, response.data]);
+      // const response = await api.post('/businesses/businesses/', formData);
+      const response = await businessService.createBusiness(formData);
+      const newBusiness = {
+        ...response,
+        id: response.id.toString()
+      };
+      setBusinesses([...businesses, newBusiness]);
       setIsAddFormOpen(false);
     } catch (err) {
       console.error('Error adding business:', err);
