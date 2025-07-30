@@ -3,7 +3,7 @@ import { IconType } from 'react-icons';
 import { FiUsers, FiCreditCard, FiDollarSign, FiTrendingDown } from 'react-icons/fi';
 
 export interface TimeFilter {
-  filterType: 'period' | 'range';
+  // filterType: 'period' | 'range';
   period?: 'day' | 'week' | 'month' | 'year';
   startDate?: Date;
   endDate?: Date;
@@ -114,7 +114,7 @@ class DashboardService {
       // Get main dashboard data
       const response = await api.get(`/subscriptions/dashboard/${businessId}/`, {
         params: {
-          filterType: timeFilter.filterType,
+          // filterType: timeFilter.filterType,
           startDate: timeFilter.startDate?.toISOString().split('T')[0],
           endDate: timeFilter.endDate?.toISOString().split('T')[0],
           period: timeFilter.period,
@@ -202,7 +202,7 @@ class DashboardService {
         `/subscriptions/dashboard/${businessId}/export/`,
         {
           params: {
-            filterType: timeFilter.filterType,
+            // filterType: timeFilter.filterType,
             startDate: timeFilter.startDate?.toISOString().split('T')[0],
             endDate: timeFilter.endDate?.toISOString().split('T')[0],
             period: timeFilter.period,
