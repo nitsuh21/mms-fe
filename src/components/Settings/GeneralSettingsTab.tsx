@@ -188,86 +188,150 @@ export function GeneralSettingsTab({
 
       {/* Business Info Fields */}
       <div className="space-y-8 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h3 className="flex items-center text-lg font-medium text-gray-900 dark:text-white">
-          <span className="mr-2 h-2 w-2 rounded-full bg-brand-500"></span>
-          Business Details
-        </h3>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <InputField
-            name="name"
-            label="Business Name"
-            placeholder="Enter business name"
-            rules={{ required: 'Business name is required' }}
-            methods={methods}
-          />
-          <InputField
-            name="email"
-            label="Business Email"
-            type="email"
-            placeholder="Enter business email"
-            rules={{ required: 'Business email is required' }}
-            methods={methods}
-          />
-          <InputField
-            name="phone"
-            label="Business Phone"
-            placeholder="Enter business phone"
-            rules={{ required: 'Business phone is required' }}
-            methods={methods}
-          />
-          <InputField
-            name="address"
-            label="Business Address"
-            placeholder="Enter business address"
-            methods={methods}
-          />
-          <SelectField
-            name="category"
-            label="Business Category"
-            options={categoryChoices}
-            methods={methods}
-          />
-          <SelectField
-            name="subcategory"
-            label="Business Subcategory"
-            description="Select your business subcategory"
-            options={subcategoryChoices}
-            methods={methods}
-          />
-          <SelectField
-            name="timezone"
-            label="Timezone"
-            options={[
-              { value: 'UTC', label: 'UTC' },
-              { value: 'ET', label: 'Africa/Addis Ababa' },
-            ]}
-            rules={{ required: 'Timezone is required' }}
-            methods={methods}
-          />
-          <SelectField
-            name="currency"
-            label="Currency"
-            options={[
-              { value: 'ETB', label: 'ETB' },
-              { value: 'USD', label: 'USD' },
-            ]}
-            rules={{ required: 'Currency is required' }}
-            methods={methods}
-          />
-        </div>
+  <h3 className="flex items-center text-lg font-medium text-gray-900 dark:text-white">
+    <span className="mr-2 h-2 w-2 rounded-full bg-brand-500"></span>
+    Business Details
+  </h3>
+  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <InputField
+      name="name"
+      label="Business Name"
+      placeholder="Enter business name"
+      rules={{
+        required: 'Business name is required',
+        minLength: {
+          value: 2,
+          message: 'Business name must be at least 2 characters'
+        },
+        maxLength: {
+          value: 100,
+          message: 'Business name must not exceed 100 characters'
+        }
+      }}
+      methods={methods}
+    />
+    <InputField
+      name="email"
+      label="Business Email"
+      type="email"
+      placeholder="Enter business email"
+      rules={{
+        required: 'Business email is required',
+        pattern: {
+          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+          message: 'Invalid email address'
+        }
+      }}
+      methods={methods}
+    />
+    <InputField
+      name="phone"
+      label="Business Phone"
+      placeholder="Enter business phone"
+      rules={{
+        required: 'Business phone is required',
+        pattern: {
+          value: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+          message: 'Invalid phone number format'
+        },
+        minLength: {
+          value: 6,
+          message: 'Phone number must be at least 6 digits'
+        },
+        maxLength: {
+          value: 20,
+          message: 'Phone number must not exceed 20 digits'
+        }
+      }}
+      methods={methods}
+    />
+    <InputField
+      name="address"
+      label="Business Address"
+      placeholder="Enter business address"
+      rules={{
+        minLength: {
+          value: 5,
+          message: 'Address must be at least 5 characters'
+        },
+        maxLength: {
+          value: 200,
+          message: 'Address must not exceed 200 characters'
+        }
+      }}
+      methods={methods}
+    />
+    <SelectField
+      name="category"
+      label="Business Category"
+      options={categoryChoices}
+      rules={{
+        required: 'Business category is required',
+        validate: (value) => 
+          categoryChoices.some(choice => choice.value === value) || 
+          'Please select a valid category'
+      }}
+      methods={methods}
+    />
+    <SelectField
+      name="subcategory"
+      label="Business Subcategory"
+      description="Select your business subcategory"
+      options={subcategoryChoices}
+      rules={{
+        required: 'Business subcategory is required',
+        validate: (value) => 
+          subcategoryChoices.some(choice => choice.value === value) || 
+          'Please select a valid subcategory'
+      }}
+      methods={methods}
+    />
+    <SelectField
+      name="timezone"
+      label="Timezone"
+      options={[
+        { value: 'UTC', label: 'UTC' },
+        { value: 'ET', label: 'Africa/Addis Ababa' },
+        // Add more timezones as needed
+      ]}
+      rules={{
+        required: 'Timezone is required',
+        validate: (value) => 
+          ['UTC', 'ET'].includes(value) || 
+          'Please select a valid timezone'
+      }}
+      methods={methods}
+    />
+    <SelectField
+      name="currency"
+      label="Currency"
+      options={[
+        { value: 'ETB', label: 'ETB' },
+        { value: 'USD', label: 'USD' },
+        // Add more currencies as needed
+      ]}
+      rules={{
+        required: 'Currency is required',
+        validate: (value) => 
+          ['ETB', 'USD'].includes(value) || 
+          'Please select a valid currency'
+      }}
+      methods={methods}
+    />
+  </div>
 
-        <div className="flex justify-end pt-6">
-          <button
-            type="button"
-            onClick={onSaveDetails}
-            disabled={isSavingDetails}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-gray-800"
-          >
-            <FiSave className="h-4 w-4" />
-            {isSavingDetails ? 'Saving...' : 'Save Details'}
-          </button>
-        </div>
-      </div>
+  <div className="flex justify-end pt-6">
+    <button
+      type="button"
+      onClick={methods.handleSubmit(onSaveDetails)} // Wrap with handleSubmit
+      disabled={isSavingDetails}
+      className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-gray-800"
+    >
+      <FiSave className="h-4 w-4" />
+      {isSavingDetails ? 'Saving...' : 'Save Details'}
+    </button>
+  </div>
+</div>
     </div>
   );
 }

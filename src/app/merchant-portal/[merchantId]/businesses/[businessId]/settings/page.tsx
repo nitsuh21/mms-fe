@@ -144,7 +144,8 @@ export default function SettingsPage({ params }: { params: { businessId: string 
     
     const visibilityData = {
       is_visible_in_search: data.isVisibleInSearch,
-      short_description: data.shortDescription,
+      // short_description: data.shortDescription,
+      description:data.shortDescription,
       website: data.website,
       instagram: data.instagram,
       facebook: data.facebook,
@@ -240,7 +241,8 @@ export default function SettingsPage({ params }: { params: { businessId: string 
         is_visible_in_search: data.isVisibleInSearch,
         category: data.category,
         subcategory: data.subcategory,
-        short_description: data.shortDescription,
+        // short_description: data.shortDescription,
+        description: data.shortDescription,
         website: data.website,
         instagram: data.instagram,
         currency: data.currency,
