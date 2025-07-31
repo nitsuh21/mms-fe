@@ -1,5 +1,6 @@
 'use client';
 
+import { useLoading } from '@/context/LoadingContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -103,7 +104,8 @@ function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   
   // State management
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, setIsLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   

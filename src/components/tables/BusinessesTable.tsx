@@ -6,6 +6,7 @@ import { FiEye, FiEdit2, FiTrash2, FiExternalLink } from "react-icons/fi";
 import { ArrowUpIcon, ArrowDownIcon, ArrowsUpDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Alert from '@/components/common/Alert';
 import { Business } from "@/types/business";
+import { useLoading } from "@/context/LoadingContext";
 
 interface BusinessesTableProps {
   businesses: Business[];
@@ -13,6 +14,7 @@ interface BusinessesTableProps {
   searchTerm?: string;
   onDelete: (businessId: string) => Promise<void>;
   onToggleActiveStatus?: (businessId: string, isActive: boolean) => Promise<void>;
+  isLoading?: boolean;
 }
 
 type SortDirection = 'asc' | 'desc';
@@ -24,6 +26,7 @@ export default function BusinessesTable({
   searchTerm = "",
   onDelete,
   onToggleActiveStatus,
+  isLoading = false,
 }: BusinessesTableProps) {
   const [sortConfig, setSortConfig] = useState<{ field: SortableField; direction: SortDirection }>({
     field: 'name',
@@ -34,7 +37,7 @@ export default function BusinessesTable({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showStatusAlert, setShowStatusAlert] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { setIsLoading } = useLoading();
 
   const sortedBusinesses = useMemo(() => {
     const sortableBusinesses = [...businesses];
@@ -102,14 +105,14 @@ export default function BusinessesTable({
   const confirmStatusChange = async () => {
     if (!selectedBusiness || !onToggleActiveStatus) return;
     
-    setIsProcessing(true);
+    setIsLoading(true);
     try {
       await onToggleActiveStatus(selectedBusiness.id, !selectedBusiness.is_active);
       setShowStatusAlert(false);
     } catch (error) {
       console.error('Error changing business status:', error);
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
       setSelectedBusiness(null);
     }
   };
@@ -117,14 +120,14 @@ export default function BusinessesTable({
   const confirmDelete = async () => {
     if (!selectedBusiness) return;
     
-    setIsProcessing(true);
+    setIsLoading(true);
     try {
       await onDelete(selectedBusiness.id);
       setShowDeleteAlert(false);
     } catch (error) {
       console.error('Error deleting business:', error);
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
       setSelectedBusiness(null);
     }
   };
@@ -265,17 +268,16 @@ export default function BusinessesTable({
                         <Link
                           href={`/merchant-portal/${merchantId}/businesses/${business.id}/dashboard`}
                           className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 text-sm font-medium inline-flex items-center"
+                          aria-disabled={isLoading}
                         >
-                          {/* <FiEye className="h-3.5 w-3.5 mr-1.5" /> */}
-                            View
+                          View
                         </Link>
                         <Link
                           href={`/merchant-portal/${merchantId}/businesses/${business.id}/settings`}
                           className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 text-sm font-medium inline-flex items-center"
+                          aria-disabled={isLoading}
                         >
-                          {/* <FiEdit2 className="h-3.5 w-3.5 mr-1.5" /> */}
                           Edit
-
                         </Link>
                         {onToggleActiveStatus && (
                           <button
@@ -285,6 +287,7 @@ export default function BusinessesTable({
                                 ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800'
                                 : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800'
                             }`}
+                            disabled={isLoading}
                           >
                             {business.is_active ? 'Deactivate' : 'Activate'}
                           </button>
@@ -292,8 +295,8 @@ export default function BusinessesTable({
                         <button
                           onClick={() => handleDeleteClick(business)}
                           className="px-2.5 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 text-sm font-medium inline-flex items-center"
+                          disabled={isLoading}
                         >
-                          {/* <FiTrash2 className="h-3.5 w-3.5 mr-1.5" /> */}
                           Delete
                         </button>
                       </div>
@@ -329,7 +332,7 @@ export default function BusinessesTable({
         type="danger"
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteAlert(false)}
-        // isProcessing={isProcessing}
+        isProcessing={isLoading}
       />
 
       {/* Status Change Alert */}
@@ -342,7 +345,7 @@ export default function BusinessesTable({
           type={selectedBusiness?.is_active ? 'warning' : 'success'}
           onConfirm={confirmStatusChange}
           onCancel={() => setShowStatusAlert(false)}
-        //   isProcessing={isProcessing}
+          isProcessing={isLoading}
         />
       )}
     </>

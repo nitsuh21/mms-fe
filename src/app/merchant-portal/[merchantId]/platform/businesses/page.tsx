@@ -9,6 +9,7 @@ import AddBusinessForm from "@/components/form/AddBusinessForm";
 import BusinessesTable from "@/components/tables/BusinessesTable";
 import BusinessesCards from "@/components/cards/BusinessesCards";
 import { businessService } from "@/services/businessService";
+import { useLoading } from "@/context/LoadingContext";
 
 interface PaginatedResponse {
   count: number;
@@ -22,14 +23,14 @@ export default function PlatformBusinessesPage() {
   const merchantId = params?.merchantId as string;
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { isLoading, setIsLoading } = useLoading();
 
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
+        setIsLoading(true);
         const response = await api.get<PaginatedResponse>(`/businesses/businesses/`);
         setBusinesses(response.data.results);
         setError(null);
@@ -37,15 +38,15 @@ export default function PlatformBusinessesPage() {
         console.error('Error fetching businesses:', err);
         setError('Failed to fetch businesses');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchBusinesses();
-  }, []);
+  }, [setIsLoading]);
 
-   const handleDelete = async (businessId: string) => {
-    setIsProcessing(true);
+  const handleDelete = async (businessId: string) => {
+    setIsLoading(true);
     try {
       await businessService.deleteBusiness(businessId);
       setBusinesses(businesses.filter(b => b.id !== businessId));
@@ -53,12 +54,12 @@ export default function PlatformBusinessesPage() {
       console.error('Error deleting business:', err);
       throw err;
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
- const handleToggleStatus = async (businessId: string, isActive: boolean) => {
-    setIsProcessing(true);
+  const handleToggleStatus = async (businessId: string, isActive: boolean) => {
+    setIsLoading(true);
     try {
       const updatedBusiness = await businessService.updateBusiness(businessId, { is_active: isActive });
       setBusinesses(businesses.map(b => 
@@ -68,13 +69,13 @@ export default function PlatformBusinessesPage() {
       console.error('Error updating business status:', err);
       throw err;
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
   
   const handleAddBusiness = async (formData: any) => {
+    setIsLoading(true);
     try {
-      // const response = await api.post('/businesses/businesses/', formData);
       const response = await businessService.createBusiness(formData);
       const newBusiness = {
         ...response,
@@ -84,17 +85,11 @@ export default function PlatformBusinessesPage() {
       setIsAddFormOpen(false);
     } catch (err) {
       console.error('Error adding business:', err);
-      throw err; // Let the form component handle the error
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white"></div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -104,6 +99,7 @@ export default function PlatformBusinessesPage() {
           <button
             onClick={() => window.location.reload()}
             className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600"
+            disabled={isLoading}
           >
             <FiEdit2 className="h-4 w-4" />
             Retry
@@ -130,9 +126,10 @@ export default function PlatformBusinessesPage() {
         <button
           onClick={() => setIsAddFormOpen(true)}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
+          disabled={isLoading}
         >
           <FiPlus className="h-4 w-4" />
-          Add Business
+          {isLoading ? 'Processing...' : 'Add Business'}
         </button>
       </div>
 
@@ -142,6 +139,7 @@ export default function PlatformBusinessesPage() {
           merchantId={merchantId} 
           onDelete={handleDelete}
           onToggleActiveStatus={handleToggleStatus}
+          isLoading={isLoading}
         />
       </div>
 
@@ -149,12 +147,14 @@ export default function PlatformBusinessesPage() {
         businesses={businesses} 
         merchantId={merchantId} 
         onDeleteClick={(business) => handleDelete(business.id)}
+        // isLoading={isLoading}
       />
 
       <AddBusinessForm
         isOpen={isAddFormOpen}
         onClose={() => setIsAddFormOpen(false)}
         onSubmit={handleAddBusiness}
+        // isLoading={isLoading}
       />
     </div>
   );

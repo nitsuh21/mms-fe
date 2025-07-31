@@ -15,6 +15,7 @@ import { UserData } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 import { platformService } from '@/services/platformService';
 import type { DashboardResponse } from '@/types/platform';
+import { useLoading } from '@/context/LoadingContext';
 
 export default function PlatformDashboardPage() {
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +28,8 @@ export default function PlatformDashboardPage() {
   const [nextMonth, setNextMonth] = useState<Date>(addMonths(new Date(), 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
+    const { isLoading, setIsLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
 
@@ -195,7 +197,7 @@ export default function PlatformDashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        setIsLoading(true);
         const data = await platformService.getDashboardData(dateRange[0], dateRange[1]);
         setDashboardData(data);
         setError(null);
@@ -203,7 +205,7 @@ export default function PlatformDashboardPage() {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to fetch dashboard data');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
         setIsFiltering(false);
       }
     };
@@ -215,7 +217,7 @@ export default function PlatformDashboardPage() {
     router.push('/auth/signin');
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-blue-500"></div></div>;
   }
 

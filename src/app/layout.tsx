@@ -1,6 +1,7 @@
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
+import { LoadingProvider } from "@/context/LoadingContext";
 
 const outfit = Outfit({
   variable: "--font-outfit-sans",
@@ -15,9 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} dark:bg-gray-900`}>
-        <Providers>
+        <LoadingProvider>
+          <Providers>
           {children}
         </Providers>
+        </LoadingProvider>
+        
       </body>
     </html>
   );
