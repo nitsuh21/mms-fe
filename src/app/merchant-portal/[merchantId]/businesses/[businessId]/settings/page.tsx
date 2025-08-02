@@ -10,6 +10,7 @@ import { SubmitButton } from '@/components/ui/Form';
 import { GeneralSettingsTab } from '@/components/Settings/GeneralSettingsTab';
 import { VisibilitySettingsTab } from '@/components/Settings/VisibilitySettingsTab';
 import type { BusinessSettingsForm } from '@/types/business-settings';
+import { useLoading } from '@/context/LoadingContext';
 
 
 const CATEGORY_CHOICES = [
@@ -55,7 +56,8 @@ export default function SettingsPage({ params }: { params: { businessId: string 
   const unwrappedParams = use(params as unknown as Promise<{ businessId: string }>);
   const businessId = unwrappedParams.businessId;
   const [business, setBusiness] = useState<Business | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
+   const { isLoading, setIsLoading } = useLoading();
   const [activeTab, setActiveTab] = useState('general');
   const [isSavingMedia, setIsSavingMedia] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);

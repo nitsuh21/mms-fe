@@ -15,6 +15,7 @@ interface MembersTableProps {
   onUpdateMember: (memberId: number, data: any) => void;
   onDeleteMember: (memberId: number) => void;
   onToggleActiveStatus: (memberId: number, isActive: boolean) => void;
+  isLoading?: boolean;
 }
 
 type SortDirection = 'asc' | 'desc';
@@ -27,6 +28,7 @@ export default function MembersTable({
   onUpdateMember,
   onDeleteMember,
   onToggleActiveStatus,
+  isLoading = false,
 }: MembersTableProps) {
   const [sortConfig, setSortConfig] = useState<{ field: SortableField; direction: SortDirection }>({
     field: 'first_name',
@@ -42,6 +44,7 @@ export default function MembersTable({
   // Bulk selection states
   const [selectedMembers, setSelectedMembers] = useState<Set<number>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isPerformingAction, setIsPerformingAction] = useState(false);
 
   const sortedMembers = useMemo(() => {
     const sortableMembers = [...members];
@@ -116,24 +119,39 @@ export default function MembersTable({
     setShowDeleteAlert(true);
   };
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (selectedMember) {
-      onToggleActiveStatus(selectedMember.id, !selectedMember.is_active);
-      setShowStatusAlert(false);
+      setIsPerformingAction(true);
+      try {
+        await onToggleActiveStatus(selectedMember.id, !selectedMember.is_active);
+      } finally {
+        setIsPerformingAction(false);
+        setShowStatusAlert(false);
+      }
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedMember?.id) {
-      onDeleteMember(selectedMember.id);
-      setShowDeleteAlert(false);
+      setIsPerformingAction(true);
+      try {
+        await onDeleteMember(selectedMember.id);
+      } finally {
+        setIsPerformingAction(false);
+        setShowDeleteAlert(false);
+      }
     }
   };
 
-  const handleUpdateSubmit = (data: any) => {
+  const handleUpdateSubmit = async (data: any) => {
     if (selectedMember) {
-      onUpdateMember(selectedMember.id, data);
-      setShowUpdateForm(false);
+      setIsPerformingAction(true);
+      try {
+        await onUpdateMember(selectedMember.id, data);
+        setShowUpdateForm(false);
+      } finally {
+        setIsPerformingAction(false);
+      }
     }
   };
 
@@ -197,11 +215,12 @@ export default function MembersTable({
                     checked={filteredMembers.length > 0 && selectedMembers.size === filteredMembers.length}
                     onChange={handleSelectAll}
                     className="ml-2"
+                    disabled={isLoading}
                   />
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => requestSort('customer_id')}
+                  onClick={() => !isLoading && requestSort('customer_id')}
                 >
                   <div className="flex items-center">
                     Customer ID
@@ -210,7 +229,7 @@ export default function MembersTable({
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => requestSort('first_name')}
+                  onClick={() => !isLoading && requestSort('first_name')}
                 >
                   <div className="flex items-center">
                     Name
@@ -219,7 +238,7 @@ export default function MembersTable({
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => requestSort('email')}
+                  onClick={() => !isLoading && requestSort('email')}
                 >
                   <div className="flex items-center">
                     Email
@@ -228,7 +247,7 @@ export default function MembersTable({
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => requestSort('phone')}
+                  onClick={() => !isLoading && requestSort('phone')}
                 >
                   <div className="flex items-center">
                     Phone
@@ -237,7 +256,7 @@ export default function MembersTable({
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => requestSort('is_active')}
+                  onClick={() => !isLoading && requestSort('is_active')}
                 >
                   <div className="flex items-center">
                     Status
@@ -250,7 +269,15 @@ export default function MembersTable({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {filteredMembers.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredMembers.length > 0 ? (
                 filteredMembers.map((member, index) => {
                   const key = member?.id || `member-${index}`;
                   return (
@@ -262,6 +289,7 @@ export default function MembersTable({
                         <TableCheckbox
                           checked={selectedMembers.has(member.id)}
                           onChange={(checked) => handleSelectMember(member.id, checked)}
+                          disabled={isPerformingAction}
                         />
                       </td>
                       <td className="px-4 py-4">
@@ -314,24 +342,27 @@ export default function MembersTable({
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => handleUpdateClick(member)}
-                            className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 text-sm font-medium inline-flex items-center"
+                            className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 text-sm font-medium inline-flex items-center disabled:opacity-50"
+                            disabled={isPerformingAction}
                           >
                             <PencilSquareIcon className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </button>
                           <button
                             onClick={() => handleStatusChangeClick(member)}
-                            className={`px-2.5 py-1 rounded-md text-sm font-medium inline-flex items-center ${
+                            className={`px-2.5 py-1 rounded-md text-sm font-medium inline-flex items-center disabled:opacity-50 ${
                               member?.is_active
                                 ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800'
                                 : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800'
                             }`}
+                            disabled={isPerformingAction}
                           >
                             {member?.is_active ? 'Deactivate' : 'Activate'}
                           </button>
                           <button
                             onClick={() => handleDeleteClick(member)}
-                            className="px-2.5 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 text-sm font-medium"
+                            className="px-2.5 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 text-sm font-medium disabled:opacity-50"
+                            disabled={isPerformingAction}
                           >
                             Delete
                           </button>
@@ -342,7 +373,7 @@ export default function MembersTable({
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center">
+                  <td colSpan={7} className="px-6 py-8 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
@@ -369,6 +400,7 @@ export default function MembersTable({
         type="danger"
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteAlert(false)}
+        // isConfirming={isPerformingAction}
       />
 
       {/* Status Change Alert */}
@@ -380,6 +412,7 @@ export default function MembersTable({
         type={selectedMember?.is_active ? 'warning' : 'success'}
         onConfirm={confirmStatusChange}
         onCancel={() => setShowStatusAlert(false)}
+        // isConfirming={isPerformingAction}
       />
 
       {/* Update Member Form */}
@@ -390,6 +423,7 @@ export default function MembersTable({
           isOpen={showUpdateForm}
           onClose={() => setShowUpdateForm(false)}
           onSubmit={handleUpdateSubmit}
+          // isLoading={isPerformingAction}
         />
       )}
     </>
