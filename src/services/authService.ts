@@ -1,6 +1,7 @@
 // mms-fe/src/services/authService.ts
 import { UserData, AuthResponse } from '@/types/auth';
 import api from './api';
+import { parseDRFError } from '@/utils/errorHandling';
 
 export class AuthService {
   static setTokens(tokens: { access: string; refresh: string }) {
@@ -261,15 +262,8 @@ export class AuthService {
     if (error.response) {
       const { status, data } = error.response;
       if (status === 400) {
-        if (data?.error.includes('password')) {
-          throw new Error('Password does not meet requirements. Must be at least 8 characters.');
-        } else if (data?.error.includes('confirm_password')) {
-          throw new Error('Passwords do not match.');
-        } else if (data?.error.includes('otp_code')) {
-          throw new Error('Invalid or expired OTP code. Please request a new one.');
-        } else {
-          throw new Error(data.error || 'Unable to reset password. Please try again.');
-        }
+        const errorMessage = parseDRFError(error);
+        throw new Error(errorMessage);
       } else if (status === 404) {
         throw new Error('No account found with this email address.');
       } else {
