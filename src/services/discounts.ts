@@ -54,15 +54,41 @@ export interface UpdateDiscountParams {
 }
 
 export const discountsService = {
-  getAll: async (): Promise<Discount[]> => {
+  getAll: async (params?: { valid?: boolean; business?: string }): Promise<Discount[]> => {
     try {
-      const response = await api.get('/subscriptions/discounts/');
+      const queryParams = new URLSearchParams();
+      if (params?.valid !== undefined) {
+        queryParams.append('valid', params.valid.toString());
+      }
+      if (params?.business) {
+        queryParams.append('business', params.business);
+      }
+      
+      const queryString = queryParams.toString();
+      const url = `/subscriptions/discounts/${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('🔍 Fetching discounts with params:', params);
+      console.log('🔗 URL:', url);
+      
+      const response = await api.get(url);
       const data = response.data;
+      
+      console.log('✅ Discounts fetched:', data);
+      
       return 'results' in data ? data.results : data;
     } catch (error: any) {
-      console.error('Error fetching discounts:', error);
+      console.error('❌ Error fetching discounts:', error);
       throw new Error(parseDRFError(error));
     }
+  },
+
+  // Convenience method for getting only valid discounts
+  getValid: async (businessId?: string): Promise<Discount[]> => {
+    console.log('🔍 Fetching VALID discounts for business:', businessId);
+    return discountsService.getAll({ 
+      valid: true, 
+      business: businessId 
+    });
   },
 
   getById: async (id: string): Promise<Discount> => {
@@ -78,6 +104,7 @@ export const discountsService = {
   create: async (data: AddDiscountParams): Promise<Discount> => {
     try {
       const response = await api.post('/subscriptions/discounts/', data);
+      console.log('Response from create discount:', response);
       return response.data;
     } catch (error: any) {
       console.error('Error creating discount:', error);

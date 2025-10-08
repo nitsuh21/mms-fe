@@ -5,10 +5,18 @@ import { Form, InputField, SelectField, SubmitButton, CheckboxField } from '@/co
 import { useNotification } from '@/context/NotificationContext';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { discountsService } from '@/services/discounts';
+import PlanService from '@/services/planService';
 import { useForm } from 'react-hook-form';
 import { DatePicker } from '@/components/ui/DatePicker';
 import BulkActions from '@/components/common/BulkActions';
 import TableCheckbox from '@/components/common/TableCheckbox';
+
+interface Plan {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+}
 
 interface Discount {
   id: string;
@@ -40,8 +48,6 @@ interface AddDiscountParams {
   discount_category: 'P' | 'D';
   valid_from: string;
   valid_until: string;
-  scope: 'A' | 'S';
-  specific_plans?: string[];
   max_uses: string;
   is_active: boolean;
 }
@@ -62,10 +68,25 @@ interface UpdateDiscountParams {
   is_active: boolean;
 }
 
+// Helper function to get start of day in ISO format
+const getStartOfDay = (date: Date = new Date()): string => {
+  const newDate = new Date(date);
+  newDate.setHours(0, 0, 0, 0);
+  return newDate.toISOString();
+};
+
+// Helper function to get end of day in ISO format
+const getEndOfDay = (date: Date = new Date()): string => {
+  const newDate = new Date(date);
+  newDate.setHours(23, 59, 59, 999);
+  return newDate.toISOString();
+};
+
 export default function DiscountsPage({ params }: { params: Promise<{ businessId: string }> }) {
   const { businessId } = use(params);
   
   const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
@@ -79,6 +100,16 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
     setIsClient(true);
   }, []);
 
+  // Load plans for the business
+  const loadPlans = useCallback(async () => {
+    try {
+      const fetchedPlans = await PlanService.getPlans(businessId);
+      setPlans(fetchedPlans);
+    } catch (error) {
+      console.error('Error loading plans:', error);
+    }
+  }, [businessId]);
+
   // Add form
   const addFormMethods = useForm<AddDiscountParams>({
     defaultValues: {
@@ -89,12 +120,10 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
       discount_type: 'P',
       discount_value: '0',
       discount_category: 'P',
-      valid_from: new Date().toISOString(),
-      valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      scope: 'A',
-      specific_plans: [],
+      valid_from: getStartOfDay(), // Start of today
+      valid_until: getEndOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // End of day 30 days from now
       max_uses: '1',
-      is_active: false,
+      is_active: true, // Default to active
     },
   });
 
@@ -108,8 +137,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
       discount_type: 'P',
       discount_value: '0',
       discount_category: 'P',
-      valid_from: new Date().toISOString(),
-      valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      valid_from: getStartOfDay(), // Start of today
+      valid_until: getEndOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // End of day 30 days from now
       scope: 'A',
       specific_plans: [],
       max_uses: '1',
@@ -121,6 +150,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
   const { watch: watchEdit, setValue: setEditValue } = editFormMethods;
   const addDiscountType = watchAdd('discount_type');
   const editDiscountType = watchEdit('discount_type');
+  const editScope = watchEdit('scope');
 
   // Effect to update edit form when selectedDiscount changes
   useEffect(() => {
@@ -154,12 +184,18 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
 
   const handleAddSubmit = async (data: AddDiscountParams) => {
     try {
+      // Always set scope to 'All Plans' and empty specific_plans
       const discountData = {
         ...data,
         business: businessId,
+        scope: 'A' as const, // Always All Plans
+        specific_plans: [] as string[], // No specific plans
       };
+
+      console.log('Discount data:', discountData);
       
       const newDiscount = await discountsService.create(discountData);
+      console.log('New discount:', newDiscount);
       setDiscounts(prev => [...prev, newDiscount]);
       setShowAddModal(false);
       addFormMethods.reset();
@@ -181,6 +217,16 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
   const handleEditSubmit = async (data: UpdateDiscountParams) => {
     try {
       if (!selectedDiscount) return;
+
+      // Validate specific plans if scope is 'S'
+      if (data.scope === 'S' && (!data.specific_plans || data.specific_plans.length === 0)) {
+        addNotification({
+          type: 'error',
+          title: 'Validation Error',
+          message: 'Please select at least one plan when scope is set to "Specific Plans"',
+        });
+        return;
+      }
 
       const updateData: UpdateDiscountParams = {
         name: data.name,
@@ -330,8 +376,9 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
   useEffect(() => {
     if (isClient) {
       loadDiscounts();
+      loadPlans();
     }
-  }, [loadDiscounts, isClient]);
+  }, [loadDiscounts, loadPlans, isClient]);
 
   const handleEdit = (discount: Discount) => {
     console.log('handleEdit called with discount:', discount);
@@ -545,7 +592,10 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                       onSubmit={handleAddSubmit}
                       className="space-y-4"
                     >
-                      {(formMethods) => (
+                      {(formMethods) => {
+                        const currentDiscountType = formMethods.watch('discount_type');
+                        
+                        return (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <InputField
                             {...formMethods.register('name', {
@@ -600,7 +650,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                                 if (isNaN(numValue)) return 'Invalid discount value';
                                 if (numValue < 0) return 'Discount value must be positive';
                                 
-                                if (addDiscountType === 'P') {
+                                if (currentDiscountType === 'P') {
                                   // For percentage discounts
                                   if (numValue > 1000) {
                                     return 'Percentage cannot exceed 1000%';
@@ -618,11 +668,11 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                                 return true;
                               }
                             })}
-                            label={`Discount Value ${addDiscountType === 'P' ? '(%)' : '(ETB)'}`}
-                            placeholder={`Enter discount value ${addDiscountType === 'P' ? '(0-100%)' : '(amount)'}`}
+                            label={`Discount Value ${currentDiscountType === 'P' ? '(%)' : '(ETB)'}`}
+                            placeholder={`Enter discount value ${currentDiscountType === 'P' ? '(0-100%)' : '(amount)'}`}
                             type="number"
                             methods={formMethods}
-                            description={addDiscountType === 'P' 
+                            description={currentDiscountType === 'P' 
                               ? 'Enter percentage value (e.g., 10 for 10% discount)' 
                               : 'Enter fixed amount in ETB (e.g., 100 for 100 ETB discount)'
                             }
@@ -638,33 +688,22 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                             ]}
                             methods={formMethods}
                           />
-                          <SelectField
-                            {...formMethods.register('scope', {
-                              required: 'Scope is required',
-                            })}
-                            label="Scope"
-                            options={[
-                              { value: 'A', label: 'All Plans' },
-                              { value: 'S', label: 'Specific Plans' },
-                            ]}
-                            methods={formMethods}
-                          />
+                          
                           <div>
                             <DatePicker
                               {...formMethods.register('valid_from', {
                                 required: 'Valid From is required',
                                 validate: (value) => {
                                   if (!value) return 'Valid From is required';
-                                  const selectedDate = new Date(value);
-                                  const now = new Date();
-                                  if (selectedDate < now) return 'Valid From date must be in the future';
                                   return true;
                                 }
                               })}
                               label="Valid From"
                               methods={formMethods}
                               required
-                              allowPastDates={false}
+                              allowPastDates={true}
+                              dateOnly={true}
+                              timeOfDay="start"
                             />
                           </div>
                           <div>
@@ -684,6 +723,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                               methods={formMethods}
                               required
                               allowPastDates={false}
+                              dateOnly={true}
+                              timeOfDay="end"
                             />
                           </div>
                           <InputField
@@ -714,11 +755,12 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                               Cancel
                             </button>
                             <SubmitButton className="inline-flex justify-center rounded-md border border-transparent bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-600">
-                              Add Discount
+                              Create Discount
                             </SubmitButton>
                           </div>
                         </div>
-                      )}
+                        );
+                      }}
                     </Form>
                   </div>
                 </div>
@@ -759,7 +801,11 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                       }}
                       className="space-y-4"
                     >
-                      {(formMethods) => (
+                      {(formMethods) => {
+                        const currentScope = formMethods.watch('scope');
+                        const currentDiscountType = formMethods.watch('discount_type');
+                        
+                        return (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <InputField
                             {...formMethods.register('name', {
@@ -814,7 +860,7 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                                 if (isNaN(numValue)) return 'Invalid discount value';
                                 if (numValue < 0) return 'Discount value must be positive';
                                 
-                                if (editDiscountType === 'P') {
+                                if (currentDiscountType === 'P') {
                                   // For percentage discounts
                                   if (numValue > 1000) {
                                     return 'Percentage cannot exceed 1000%';
@@ -832,11 +878,11 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                                 return true;
                               }
                             })}
-                            label={`Discount Value ${editDiscountType === 'P' ? '(%)' : '(ETB)'}`}
-                            placeholder={`Enter discount value ${editDiscountType === 'P' ? '(0-100%)' : '(amount)'}`}
+                            label={`Discount Value ${currentDiscountType === 'P' ? '(%)' : '(ETB)'}`}
+                            placeholder={`Enter discount value ${currentDiscountType === 'P' ? '(0-100%)' : '(amount)'}`}
                             type="number"
                             methods={formMethods}
-                            description={editDiscountType === 'P' 
+                            description={currentDiscountType === 'P' 
                               ? 'Enter percentage value (e.g., 10 for 10% discount)' 
                               : 'Enter fixed amount in ETB (e.g., 100 for 100 ETB discount)'
                             }
@@ -862,7 +908,62 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                               { value: 'S', label: 'Specific Plans' },
                             ]}
                             methods={formMethods}
+                            description="Choose 'All Plans' to apply to any plan, or 'Specific Plans' to select which plans this discount can be applied to"
                           />
+                          
+                          {/* Conditional Plans Selector - Only shown when Scope is 'Specific Plans' */}
+                          {currentScope === 'S' && (
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Select Specific Plans <span className="text-red-500">*</span>
+                              </label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                This discount will only be available for the selected plans
+                              </p>
+                              <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-3 bg-gray-50 dark:bg-gray-700">
+                                {plans.length === 0 ? (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                                    No plans available. Please create a subscription plan first.
+                                  </p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {plans.map((plan) => {
+                                      const currentPlans = formMethods.getValues('specific_plans') || [];
+                                      const isChecked = currentPlans.includes(String(plan.id));
+                                      
+                                      return (
+                                        <label 
+                                          key={plan.id} 
+                                          className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={(e) => {
+                                              const currentPlans = formMethods.getValues('specific_plans') || [];
+                                              const planId = String(plan.id);
+                                              
+                                              if (e.target.checked) {
+                                                formMethods.setValue('specific_plans', [...currentPlans, planId]);
+                                              } else {
+                                                formMethods.setValue('specific_plans', currentPlans.filter(id => id !== planId));
+                                              }
+                                            }}
+                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                          />
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{plan.name}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">ETB {plan.price}/month</p>
+                                          </div>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
                           <div>
                             <DatePicker
                               {...formMethods.register('valid_from', {
@@ -876,6 +977,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                               methods={formMethods}
                               required
                               allowPastDates={true}
+                              dateOnly={true}
+                              timeOfDay="start"
                             />
                           </div>
                           <div>
@@ -895,6 +998,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                               methods={formMethods}
                               required
                               allowPastDates={true}
+                              dateOnly={true}
+                              timeOfDay="end"
                             />
                           </div>
                           <InputField
@@ -929,7 +1034,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
                             </SubmitButton>
                           </div>
                         </div>
-                      )}
+                        );
+                      }}
                     </Form>
                   </div>
                 </div>
@@ -972,15 +1078,19 @@ export default function DiscountsPage({ params }: { params: Promise<{ businessId
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {discounts.map((discount: Discount) => (
-                <tr key={discount.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  {columns.map((column) => (
-                    <td key={column.header} className="px-6 py-4 whitespace-nowrap">
-                      {column.cell ? column.cell({ row: { original: discount } }) : discount[column.accessorKey as keyof Discount]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {discounts.map((discount: Discount) => {
+                const isValid = discounts.some(d => d.id === discount.id);
+                
+                return (
+                  <tr key={discount.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    {columns.map((column) => (
+                      <td key={column.header} className="px-6 py-4 whitespace-nowrap">
+                        {column.cell ? column.cell({ row: { original: discount } }) : discount[column.accessorKey as keyof Discount]}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

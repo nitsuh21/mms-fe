@@ -123,7 +123,13 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
   const loadDiscounts = async () => {
     try {
-      const fetchedDiscounts = await discountsService.getAll();
+      console.log('🔍 Loading VALID discounts for business:', businessId);
+      
+      // Fetch only VALID discounts for this business
+      const fetchedDiscounts = await discountsService.getValid(businessId);
+      
+      console.log('✅ Valid discounts loaded:', fetchedDiscounts.length);
+      
       // Convert string values to numbers
       const formattedDiscounts = fetchedDiscounts.map((d: any) => ({
         ...d,
@@ -133,7 +139,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
       }));
       setDiscounts(formattedDiscounts);
     } catch (error) {
-      console.error('Error loading discounts:', error);
+      console.error('❌ Error loading discounts:', error);
       addNotification({
         type: 'error',
         title: 'Error',
@@ -548,34 +554,91 @@ export default function PlansPage({ params }: { params: { businessId: string } }
 
       {/*Connect Discount Modal*/}
       {showDiscountModal && selectedPlan && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-xl font-bold mb-4">Connect Discount to Plan</h2>
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="mb-4">
+              <h2 className="text-xl font-bold">Connect Discount to Plan</h2>
+              <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-900 dark:text-blue-200 font-medium">
+                  ℹ️ Valid Discounts Criteria:
+                </p>
+                <ul className="text-xs text-blue-800 dark:text-blue-300 mt-2 space-y-1 ml-5 list-disc">
+                  <li>Must be marked as <strong>Active</strong></li>
+                  <li>Current date must be within the discount&apos;s <strong>valid date range</strong></li>
+                  <li>Must have <strong>remaining uses</strong> available (if usage limit is set)</li>
+                </ul>
+              </div>
+            </div>
+            
             <div className="space-y-4">
-              {discounts.map((discount) => (
-                <div
-                  key={discount.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded"
-                >
-                  <div>
-                    <h3 className="font-medium">{discount.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {discount.discount_type === 'P' 
-                        ? `${discount.discount_value}% off` 
-                        : `ETB ${discount.discount_value} off`}
+              {discounts.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="text-5xl mb-4">🎫</div>
+                  <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">No Valid Discounts Available</p>
+                  <div className="mt-4 text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                    <p className="mb-3">To connect a discount to this plan, create a discount that meets these requirements:</p>
+                    <ul className="text-left space-y-2 bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 font-bold">✓</span>
+                        <span><strong>Active Status:</strong> Toggle &quot;is active&quot; to ON</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 font-bold">✓</span>
+                        <span><strong>Valid Dates:</strong> Set &quot;valid from&quot; to today or earlier, and &quot;valid until&quot; to a future date</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 font-bold">✓</span>
+                        <span><strong>Usage Limit:</strong> Ensure the discount hasn&apos;t reached its maximum uses</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-800 dark:text-green-300">
+                      ✅ <strong>{discounts.length}</strong> valid discount{discounts.length !== 1 ? 's' : ''} found. 
+                      These discounts are <strong>active</strong>, <strong>currently within their valid date range</strong>, 
+                      and have <strong>available uses</strong>.
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      handleConnectDiscount(selectedPlan.id, discount.id);
-                      setShowDiscountModal(false);
-                    }}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  {discounts.map((discount) => (
+                  <div
+                    key={discount.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
                   >
-                    Connect
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{discount.name}</h3>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {discount.discount_type === 'P' 
+                          ? `${discount.discount_value}% off` 
+                          : `ETB ${discount.discount_value} off`}
+                        {discount.max_uses > 0 && (
+                          <span className="ml-2">• {discount.times_used}/{discount.max_uses} uses</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Code: {discount.code}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleConnectDiscount(selectedPlan.id, discount.id);
+                        setShowDiscountModal(false);
+                      }}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                ))}
+                </>
+              )}
             </div>
             <div className="mt-6 flex justify-end">
               <button
@@ -583,7 +646,7 @@ export default function PlansPage({ params }: { params: { businessId: string } }
                   setShowDiscountModal(false);
                   setSelectedPlan(null);
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 Close
               </button>
