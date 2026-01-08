@@ -1,55 +1,40 @@
-"use client"
-
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import React from 'react';
 
 interface DialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  children: React.ReactNode
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
 }
 
-const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
-  if (!open) return null
+export function Dialog({ isOpen, onClose, title, children, className = '' }: DialogProps) {
+  if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={() => onOpenChange(false)}
-    >
-      <div className="fixed inset-0 bg-black/50" />
-      <div
-        className="relative z-50 w-full max-w-lg p-6 bg-white rounded-lg shadow-xl"
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div 
+        className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md p-6 shadow-xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {children}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+          <button
+            onClick={onClose}
+            type="button"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <span className="sr-only">Close</span>
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div>{children}</div>
       </div>
     </div>
-  )
+  );
 }
 
-const DialogContent = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("space-y-4", className)} {...props}>
-    {children}
-  </div>
-)
 
-const DialogHeader = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("space-y-1.5", className)} {...props}>
-    {children}
-  </div>
-)
 
-const DialogFooter = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex justify-end space-x-2 mt-4", className)} {...props}>
-    {children}
-  </div>
-)
-
-const DialogTitle = ({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h2 className={cn("text-lg font-semibold", className)} {...props}>
-    {children}
-  </h2>
-)
-
-export { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle }

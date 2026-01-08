@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import BulkActions from '@/components/common/BulkActions';
 import TableCheckbox from '@/components/common/TableCheckbox';
+import { CreateSubscriptionModal } from '@/components/subscriptions/CreateSubscriptionModal';
 
 
 interface Payment {
@@ -852,236 +853,18 @@ function SubscriptionsContent() {
         </div>
       )}
 
-      {/* Add/Edit Subscription Modal */}
-      {(showAddSubscription || editMode) && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-gray-900 rounded-lg p-6 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {editMode ? 'Edit Subscription' : 'Add New Subscription'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowAddSubscription(false);
-                  setEditMode(false);
-                  setEditingSubscription(null);
-                  setEditSubscriptionData(null);
-                  resetFormData();
-                }}
-                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-              >
-                <XIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={editMode ? handleUpdateSubscription : handleCreateSubscription} className="space-y-4">
-              {!editMode && (
-                <div>
-                  <label htmlFor="customer_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Customer *
-                  </label>
-                  <select
-                    id="customer_id"
-                    name="customer_id"
-                    value={formData.customer_id || ''}
-                    onChange={(e) => {
-                      const customerId = Number(e.target.value);
-                      setFormData(prev => ({
-                        ...prev,
-                        customer_id: customerId
-                      }));
-                    }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-                    required
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map(customer => (
-                      <option key={customer.id} value={customer.id}>
-                        {`${customer.first_name} ${customer.last_name}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label htmlFor="plan_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Plan *
-                </label>
-                <select
-                  id="plan_id"
-                  name="plan_id"
-                  value={editMode ? (editSubscriptionData?.plan_id || editingSubscription?.plan.id) : formData.plan_id || ''}
-                  onChange={(e) => {
-                    const planId = Number(e.target.value);
-                    const selectedPlan = plans.find(p => p.id === planId);
-                    if (selectedPlan) {
-                      if (editMode) {
-                        const startDate = editSubscriptionData?.start_date || editingSubscription?.start_date;
-                        const endDate = calculateEndDate(startDate!, selectedPlan);
-                        const trialEndDate = editSubscriptionData?.use_trial ? calculateTrialEndDate(startDate!, selectedPlan) : null;
-                        setEditSubscriptionData(prev => ({
-                          ...prev!,
-                          plan_id: planId,
-                          end_date: endDate,
-                          trial_end: trialEndDate,
-                          use_trial: selectedPlan.has_trial ? (prev?.use_trial || false) : false
-                        }));
-                      } else {
-                        const startDate = formData.start_date;
-                        const useTrial = selectedPlan.has_trial && formData.use_trial;
-                        const endDate = calculateEndDate(startDate, selectedPlan);
-                        const trialEndDate = useTrial ? calculateTrialEndDate(startDate, selectedPlan) : undefined;
-                        
-                        setFormData(prev => ({
-                          ...prev,
-                          plan_id: planId,
-                          use_trial: false, // Reset trial when plan changes
-                          end_date: endDate,
-                          trial_end: trialEndDate
-                        }));
-                      }
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-                  required
-                >
-                  <option value="">Select Plan</option>
-                  {plans.map(plan => {
-                    const hasDiscount = plan.discounted_price && plan.discounted_price < plan.price;
-                    const hasTrial = plan.has_trial && plan.trial_days > 0;
-                    let priceDisplay = hasDiscount
-                      ? `${plan.name} - $${plan.discounted_price}/month (${Math.round((1 - plan.discounted_price/plan.price) * 100)}% off)`
-                      : `${plan.name} - $${plan.price}/month`;
-                    if (hasTrial) {
-                      priceDisplay += ` • ${plan.trial_days} Days Trial`;
-                    }
-                    return (
-                      <option key={plan.id} value={plan.id}>
-                        {priceDisplay}
-                      </option>
-                    );
-                  })}
-                </select>
-                {formData.plan_id && (
-                  <div className="space-y-1 mt-1">
-                    {plans.find(p => p.id === formData.plan_id)?.discounted_price && (
-                      <div className="text-sm text-green-600 dark:text-green-400">
-                        This plan is currently discounted!
-                      </div>
-                    )}
-                    {plans.find(p => p.id === formData.plan_id)?.has_trial && (
-                      <div className="text-sm text-blue-600 dark:text-blue-400">
-                        This plan includes a {plans.find(p => p.id === formData.plan_id)?.trial_days}-day trial period!
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Start Date *
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiCalendar className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="date"
-                    id="start_date"
-                    name="start_date"
-                    value={editMode ? editSubscriptionData?.start_date : formData.start_date}
-                    onChange={(e) => {
-                      const newStartDate = e.target.value;
-                      const selectedPlan = plans.find(p => p.id === formData.plan_id);
-                      if (selectedPlan) {
-                        const endDate = calculateEndDate(newStartDate, selectedPlan);
-                        const trialEndDate = formData.use_trial ? calculateTrialEndDate(newStartDate, selectedPlan) : undefined;
-                        setFormData(prev => ({
-                          ...prev,
-                          start_date: newStartDate,
-                          end_date: endDate,
-                          trial_end: trialEndDate
-                        }));
-                      }
-                    }}
-                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-                    required
-                  />
-                </div>
-              </div>
-
-              {editMode && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Status
-                  </label>
-                  <select
-                    value={editSubscriptionData?.status || ''}
-                    onChange={(e) => setEditSubscriptionData((prev: EditSubscriptionData | null) => ({ ...prev!, status: e.target.value as any }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-                  >
-                    <option value="AC">Active</option>
-                    <option value="PD">Past Due</option>
-                    <option value="CN">Cancelled</option>
-                    <option value="TR">Trial</option>
-                    <option value="EX">Expired</option>
-                  </select>
-                </div>
-              )}
-
-              {!editMode && formData.plan_id && plans.find(p => p.id === formData.plan_id)?.has_trial && (
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="use_trial"
-                    checked={formData.use_trial}
-                    onChange={(e) => {
-                      const useTrial = e.target.checked;
-                      const plan = plans.find(p => p.id === formData.plan_id);
-                      if (plan) {
-                        const endDate = calculateEndDate(formData.start_date, plan);
-                        const trialEndDate = useTrial ? calculateTrialEndDate(formData.start_date, plan) : undefined;
-                        setFormData(prev => ({
-                          ...prev,
-                          use_trial: useTrial,
-                          end_date: endDate,
-                          trial_end: trialEndDate
-                        }));
-                      }
-                    }}
-                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="use_trial" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                    Start with trial period ({plans.find(p => p.id === formData.plan_id)?.trial_days} days)
-                  </label>
-                </div>
-              )}
-
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddSubscription(false);
-                    setEditMode(false);
-                    setEditingSubscription(null);
-                    setEditSubscriptionData(null);
-                    resetFormData();
-                  }}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? (editMode ? 'Saving...' : 'Creating...') : (editMode ? 'Save Changes' : 'Create Subscription')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Create Subscription Modal */}
+      <CreateSubscriptionModal
+        isOpen={showAddSubscription && !editMode}
+        onClose={() => {
+          setShowAddSubscription(false);
+          resetFormData();
+        }}
+        onSuccess={() => {
+          setShowAddSubscription(false);
+          loadSubscriptions();
+        }}
+      />
     </div>
   );
 }
