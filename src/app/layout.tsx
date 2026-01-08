@@ -17,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} dark:bg-gray-900`}>
         <LoadingProvider>
+          
           <Providers>
           {children}
         </Providers>
