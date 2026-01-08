@@ -1,40 +1,85 @@
-import React from 'react';
+"use client";
+
+import * as React from "react";
 
 interface DialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
-  className?: string;
 }
 
-export function Dialog({ isOpen, onClose, title, children, className = '' }: DialogProps) {
-  if (!isOpen) return null;
+export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={() => onOpenChange?.(false)}
+    >
       <div 
-        className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md p-6 shadow-xl ${className}`}
+        className="fixed inset-0 bg-black/50"
+        aria-hidden="true"
+      />
+      <div 
+        className="relative z-50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-          <button
-            onClick={onClose}
-            type="button"
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            <span className="sr-only">Close</span>
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div>{children}</div>
+        {children}
       </div>
     </div>
   );
 }
 
+interface DialogContentProps {
+  children: React.ReactNode;
+  className?: string;
+}
 
+export function DialogContent({ children, className = "" }: DialogContentProps) {
+  return (
+    <div 
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
 
+interface DialogHeaderProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function DialogHeader({ children, className = "" }: DialogHeaderProps) {
+  return (
+    <div className={`mb-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+interface DialogTitleProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function DialogTitle({ children, className = "" }: DialogTitleProps) {
+  return (
+    <h2 className={`text-xl font-semibold text-gray-900 dark:text-white ${className}`}>
+      {children}
+    </h2>
+  );
+}
+
+interface DialogFooterProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function DialogFooter({ children, className = "" }: DialogFooterProps) {
+  return (
+    <div className={`mt-6 flex justify-end gap-2 ${className}`}>
+      {children}
+    </div>
+  );
+}
