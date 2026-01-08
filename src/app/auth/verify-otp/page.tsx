@@ -1,7 +1,7 @@
 // mms-fe/src/app/auth/verify-otp/page.tsx
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
@@ -14,7 +14,7 @@ interface FormData {
   otp: string[];
 }
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -315,5 +315,17 @@ export default function VerifyOTPPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }

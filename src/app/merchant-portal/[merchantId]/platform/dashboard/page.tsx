@@ -10,7 +10,7 @@ import {
   endOfMonth, eachDayOfInterval, isSameMonth, isSameDay,
   addDays, startOfWeek, endOfWeek, isWithinInterval
 } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { UserData } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 import { platformService } from '@/services/platformService';

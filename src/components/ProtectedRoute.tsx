@@ -1,4 +1,4 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {

@@ -1,8 +1,8 @@
 "use client";
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function MerchantLayout({
