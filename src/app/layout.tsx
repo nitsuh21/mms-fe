@@ -21,7 +21,6 @@ export default function RootLayout({
           {children}
         </Providers>
         </LoadingProvider>
-        
       </body>
     </html>
   );
