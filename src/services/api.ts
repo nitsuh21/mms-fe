@@ -2,15 +2,14 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 import { AuthService } from './authService';
 
 // API base URL from environment variables
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-// Normalize API URL by removing trailing slash if present
-const normalizedApiUrl = API_BASE_URL.endsWith('/') 
-  ? API_BASE_URL.slice(0, -1)
-  : API_BASE_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 console.log('API_BASE_URL', API_BASE_URL);
-console.log('normalizedApiUrl', normalizedApiUrl);
+
+// Normalize API URL by removing trailing slash if present
+const normalizedApiUrl = API_BASE_URL?.endsWith('/') 
+  ? API_BASE_URL.slice(0, -1)
+  : API_BASE_URL;
 
 const api = axios.create({
   baseURL: `${normalizedApiUrl}/api`,  // Add /api to base URL
