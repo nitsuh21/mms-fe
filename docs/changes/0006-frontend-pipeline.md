@@ -1,6 +1,6 @@
 # 0006 — Frontend Pipeline (CI Gate + Vercel Deploys)
 
-- **Status:** In Progress
+- **Status:** Done
 - **Date:** 2026-07-19
 - **Author:** Nitsuh / Claude
 
@@ -29,13 +29,17 @@ on every PR/push.
    `eslint-config-next` pinned to 16.1.1 to match Next.
 4. Verified: production build passes locally and in CI.
 
-## Vercel settings to verify (needs Vercel access — MCP or dashboard)
+## Vercel setup (verified 2026-07-19 via Vercel MCP + bundle inspection)
 
-- Dev project: production branch must be **`dev`** (was likely `development`,
-  which no longer exists — deploys would be stuck on the last build).
-- Prod project: production branch **`main`**.
-- Env vars: `NEXT_PUBLIC_API_URL` = `https://dev-mms-api.andlay.app` (dev
-  project) / `https://mms-api.andlay.app` (prod project).
+Two Vercel projects in team `nitsuh21s-projects`, both building repo `nitsuh21/mms-fe`:
+
+| Project | Production branch | Domain | Baked API URL (verified in deployed bundle) |
+|---|---|---|---|
+| `mms` | `main` | mms.andlay.app | `mms-api.andlay.app` ✅ |
+| `dev-mms` | `dev` | dev-mms.andlay.app | `dev-mms-api.andlay.app` ✅ |
+
+A third project `mms-fe` (domain mms.eytta.com) is a stray duplicate building the
+same repo — candidate for deletion/pause to save build minutes.
 
 ## Testing
 
@@ -44,4 +48,4 @@ on every PR/push.
 
 ## Open questions
 
-- Confirm actual Vercel project names/settings once MCP access is authorized.
+- None — pipeline verified end to end.

@@ -31,7 +31,7 @@ notable change must have its own doc here before (or alongside) the code change.
 | 0003 | [Reference-data-driven UI](changes/0003-reference-data-driven-ui.md) | Planned |
 | 0004 | [i18n plumbing (next-intl)](changes/0004-i18n-plumbing.md) | Planned |
 | 0005 | [Auth & RBAC consolidation](changes/0005-auth-rbac-consolidation.md) | Planned |
-| 0006 | [Frontend pipeline (CI gate + Vercel deploys)](changes/0006-frontend-pipeline.md) | In Progress |
+| 0006 | [Frontend pipeline (CI gate + Vercel deploys)](changes/0006-frontend-pipeline.md) | Done |
 
 ## Design principles (apply to all changes)
 
